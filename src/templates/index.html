@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="jumbotron bg-primary text-white rounded p-5 mb-4">
+    <h1 class="display-4">Dark Web Search Tool</h1>
+    <p class="lead">A clear text search tool for dark web content analysis</p>
+    <hr class="my-4">
+    <p class="mb-4">This educational project provides tools for searching and analyzing dark web content in a safe and legal manner.</p>
+    <a class="btn btn-light btn-lg" href="{{ url_for('search') }}" role="button">Start Searching</a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Search</h5>
+                <p class="card-text">Search through indexed dark web content using our clear text search engine.</p>
+                <a href="{{ url_for('search') }}" class="btn btn-primary">Go to Search</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Analytics</h5>
+                <p class="card-text">View analytics and insights about dark web content patterns and trends.</p>
+                <button class="btn btn-secondary" disabled>Coming Soon</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Documentation</h5>
+                <p class="card-text">Learn about the project, its methodology, and how to contribute.</p>
+                <a href="https://github.com/Tomatenmark05/darkwebsearch" class="btn btn-outline-primary" target="_blank">View on GitHub</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-warning mt-4" role="alert">
+    <h5 class="alert-heading">Educational Use Only</h5>
+    <p>This tool is designed for educational and research purposes. Please ensure all usage complies with applicable laws and ethical guidelines.</p>
+</div>
+{% endblock %}
