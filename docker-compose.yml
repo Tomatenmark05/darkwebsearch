@@ -1,0 +1,84 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: darkweb_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: darkwebsearch
+      MYSQL_USER: darkweb_user
+      MYSQL_PASSWORD: darkweb_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - darkweb_network
+
+  manager:
+    build: ./manager
+    container_name: darkweb_manager
+    ports:
+      - "5000:5000"
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=darkweb_user
+      - MYSQL_PASSWORD=darkweb_pass
+      - MYSQL_DATABASE=darkwebsearch
+      - CRAWLER_URL=http://crawler:5001
+      - ANALYSIS_URL=http://data-analysis:5002
+    depends_on:
+      - mysql
+    networks:
+      - darkweb_network
+
+  crawler:
+    build: ./crawler
+    container_name: darkweb_crawler
+    ports:
+      - "5001:5001"
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=darkweb_user
+      - MYSQL_PASSWORD=darkweb_pass
+      - MYSQL_DATABASE=darkwebsearch
+    depends_on:
+      - mysql
+    networks:
+      - darkweb_network
+
+  data-analysis:
+    build: ./data-analysis
+    container_name: darkweb_analysis
+    ports:
+      - "5002:5002"
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=darkweb_user
+      - MYSQL_PASSWORD=darkweb_pass
+      - MYSQL_DATABASE=darkwebsearch
+    depends_on:
+      - mysql
+    networks:
+      - darkweb_network
+
+  sveltekit-gui:
+    build: ./sveltekit-gui
+    container_name: darkweb_gui
+    ports:
+      - "3000:3000"
+    environment:
+      - MANAGER_URL=http://manager:5000
+      - PUBLIC_SUPABASE_URL=your_supabase_url
+      - PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+    depends_on:
+      - manager
+    networks:
+      - darkweb_network
+
+volumes:
+  mysql_data:
+
+networks:
+  darkweb_network:
+    driver: bridge
