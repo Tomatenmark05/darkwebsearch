@@ -40,3 +40,7 @@ The application is composed of four main microservices, each developed and maint
 - Returns resulting tags to the Manager
 - Simple GUI to change analysis settings (Embedded in Manger)
 - (Multithreading)
+
+## Sequence Diagram
+
+![sequence-diagram](./media/sequence-diagram.png)
