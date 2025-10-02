@@ -42,5 +42,27 @@ The application is composed of four main microservices, each developed and maint
 - (Multithreading)
 
 ## Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant User
+    participant DarknetBrowser as Darknet-Browser
+    participant Manager
+    participant Crawler
+    participant Datenauswertung
+    participant Supabase
 
-![sequence-diagram](./media/sequence-diagram.png)
+    %% User search flow
+    User->>DarknetBrowser: login
+    DarknetBrowser->>Supabase: auth
+    Supabase-->>DarknetBrowser: auth
+    DarknetBrowser->>Manager: search query
+    Manager-->>DarknetBrowser: results
+
+    %% Independent continuous crawl and analysis flow
+    loop Continuous crawling & analysis
+        Crawler->>Crawler: crawl
+        Crawler->>Manager: crawl data
+        Manager->>Datenauswertung: analyse job
+        Datenauswertung->>Manager: analyse result
+    end
+```
