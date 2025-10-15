@@ -1,0 +1,345 @@
+openapi: 3.0.3
+info:
+  title: Darkwebsearch - Data Analysis API
+  version: "1.0.0"
+  description: API for analyzing crawled data and managing analysis settings.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: "/"
+    description: Relative server URL — replace with the real base URL when deployed
+
+paths:
+  /analyze:
+    post:
+      summary: Submit data for analysis
+      operationId: analyzeData
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [job_id, data]
+              properties:
+                job_id:
+                  type: string
+                  description: Unique identifier for the analysis job
+                data:
+                  type: array
+                  description: Array of crawled data to analyze
+                  items:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        description: Source URL
+                      content:
+                        type: string
+                        description: Crawled content
+                      html:
+                        type: string
+                        description: Raw HTML content
+                      timestamp:
+                        type: string
+                        format: date-time
+                        description: Crawl timestamp
+                analysis_type:
+                  type: array
+                  description: Types of analysis to perform
+                  items:
+                    type: string
+                    enum: [keyword, sentiment, classification, entity_extraction]
+                  default: [keyword, classification]
+      responses:
+        "200":
+          description: Analysis job submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued, processing]
+                  message:
+                    type: string
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "503":
+          description: Service unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analyze/status/{job_id}:
+    get:
+      summary: Get status of an analysis job
+      operationId: getAnalysisStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the analysis job
+      responses:
+        "200":
+          description: Analysis job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued, processing, completed, failed]
+                  progress:
+                    type: object
+                    properties:
+                      items_processed:
+                        type: integer
+                      total_items:
+                        type: integer
+                  started_at:
+                    type: string
+                    format: date-time
+                  completed_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+        "404":
+          description: Job not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analyze/results/{job_id}:
+    get:
+      summary: Get results of an analysis job
+      operationId: getAnalysisResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the analysis job
+      responses:
+        "200":
+          description: Analysis results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [completed]
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalysisResult'
+        "404":
+          description: Job not found or not completed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /settings:
+    get:
+      summary: Get analysis settings
+      operationId: getSettings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Analysis settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisSettings'
+
+    put:
+      summary: Update analysis settings
+      operationId: updateSettings
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisSettings'
+      responses:
+        "200":
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  settings:
+                    $ref: '#/components/schemas/AnalysisSettings'
+        "400":
+          description: Invalid settings
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AnalysisResult:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Source URL
+        tags:
+          type: array
+          description: Generated tags
+          items:
+            type: string
+        categories:
+          type: array
+          description: Classified categories
+          items:
+            type: string
+        keywords:
+          type: array
+          description: Extracted keywords
+          items:
+            type: object
+            properties:
+              keyword:
+                type: string
+              score:
+                type: number
+                format: float
+        sentiment:
+          type: object
+          description: Sentiment analysis results
+          properties:
+            polarity:
+              type: number
+              format: float
+              description: Sentiment polarity (-1 to 1)
+            subjectivity:
+              type: number
+              format: float
+              description: Subjectivity score (0 to 1)
+        entities:
+          type: array
+          description: Extracted entities
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              type:
+                type: string
+                enum: [PERSON, ORGANIZATION, LOCATION, DATE, OTHER]
+        risk_score:
+          type: number
+          format: float
+          description: Calculated risk score (0 to 1)
+        timestamp:
+          type: string
+          format: date-time
+          description: Analysis timestamp
+
+    AnalysisSettings:
+      type: object
+      properties:
+        enable_keyword_extraction:
+          type: boolean
+          description: Enable keyword extraction
+          default: true
+        enable_sentiment_analysis:
+          type: boolean
+          description: Enable sentiment analysis
+          default: true
+        enable_classification:
+          type: boolean
+          description: Enable content classification
+          default: true
+        enable_entity_extraction:
+          type: boolean
+          description: Enable entity extraction
+          default: false
+        min_keyword_score:
+          type: number
+          format: float
+          description: Minimum score for keyword extraction
+          default: 0.5
+        language:
+          type: string
+          description: Language for analysis
+          default: "en"
+        max_tags_per_item:
+          type: integer
+          description: Maximum number of tags per analyzed item
+          default: 10
+        multithreading:
+          type: boolean
+          description: Enable multithreading for analysis
+          default: false
+
+    Error:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
