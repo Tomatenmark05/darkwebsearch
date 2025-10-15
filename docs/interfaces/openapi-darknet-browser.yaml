@@ -1,0 +1,369 @@
+openapi: 3.0.3
+info:
+  title: Darkwebsearch - Darknet Browser API
+  version: "1.0.0"
+  description: API for the SvelteKit frontend to interact with the Manager service and handle user authentication.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: "/"
+    description: Relative server URL — replace with the real base URL when deployed
+
+paths:
+  /api/search:
+    post:
+      summary: Perform a search query
+      operationId: searchQuery
+      description: Proxy endpoint to Manager service for search queries
+      security:
+        - supabaseAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: Search query text
+                  minLength: 1
+                  example: "cryptocurrency"
+                filters:
+                  type: object
+                  description: Optional search filters
+                  properties:
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    date_from:
+                      type: string
+                      format: date
+                    date_to:
+                      type: string
+                      format: date
+                    risk_score_min:
+                      type: number
+                      format: float
+                    risk_score_max:
+                      type: number
+                      format: float
+                limit:
+                  type: integer
+                  description: Maximum number of results to return
+                  default: 10
+                  minimum: 1
+                  maximum: 100
+                offset:
+                  type: integer
+                  description: Offset for pagination
+                  default: 0
+                  minimum: 0
+      responses:
+        "200":
+          description: Successful search
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchResult'
+                  total:
+                    type: integer
+                    description: Total number of results
+                  query:
+                    type: string
+                    description: Original query
+                  filters:
+                    type: object
+                    description: Applied filters
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized - authentication required
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "429":
+          description: Too many requests - rate limit exceeded
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "503":
+          description: Service unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/search/history:
+    get:
+      summary: Get user's search history
+      operationId: getSearchHistory
+      security:
+        - supabaseAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: Maximum number of history items to return
+      responses:
+        "200":
+          description: Search history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  history:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        query:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                        results_count:
+                          type: integer
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      summary: User login
+      operationId: login
+      description: Authenticate user with Supabase
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        "400":
+          description: Invalid credentials
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      summary: User logout
+      operationId: logout
+      security:
+        - supabaseAuth: []
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/auth/register:
+    post:
+      summary: User registration
+      operationId: register
+      description: Register new user with Supabase
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        "401":
+          description: Invalid refresh token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/user/profile:
+    get:
+      summary: Get user profile
+      operationId: getUserProfile
+      security:
+        - supabaseAuth: []
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    supabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token
+
+  schemas:
+    SearchResult:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Page title or content snippet
+        url:
+          type: string
+          description: Source URL
+        snippet:
+          type: string
+          description: Content snippet matching the search query
+        tags:
+          type: array
+          description: Associated tags
+          items:
+            type: string
+        categories:
+          type: array
+          description: Classified categories
+          items:
+            type: string
+        risk_score:
+          type: number
+          format: float
+          description: Risk score (0 to 1)
+        timestamp:
+          type: string
+          format: date-time
+          description: When the content was crawled
+        relevance_score:
+          type: number
+          format: float
+          description: Search relevance score
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        last_sign_in:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
