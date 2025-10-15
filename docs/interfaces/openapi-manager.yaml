@@ -1,0 +1,107 @@
+openapi: 3.0.3
+info:
+  title: Darkwebsearch - Manager API
+  version: "1.0.0"
+  description: API for managing search queries and crawled data in Darkwebsearch.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: "/"
+    description: Relative server URL — replace with the real base URL when deployed
+
+paths:
+  /search:
+    post:
+      summary: Perform a search query
+      operationId: searchQuery
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: Search query text
+      responses:
+        "200":
+          description: Successful search
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: string
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  status:
+                    type: integer
+                  detail:
+                    type: string
+  /crawl:
+    post:
+      summary: Provide crawled data
+      operationId: crawlData
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Successful crawl data submission
+          content:
+            application/json:
+              schema:
+                type: boolean
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  status:
+                    type: integer
+                  detail:
+                    type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
