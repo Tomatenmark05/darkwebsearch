@@ -60,9 +60,11 @@ sequenceDiagram
 
     %% Independent continuous crawl and analysis flow
     loop Continuous crawling & analysis
-        Crawler->>Crawler: crawl
-        Crawler->>Manager: crawl data
+        Manager->>Crawler: crawl job
+        Manager->>Crawler: crawl status
+        Crawler->>Manager: crawl results
         Manager->>Datenauswertung: analyse job
+        Manager->>Datenauswertung: analyse status
         Datenauswertung->>Manager: analyse result
     end
 ```
