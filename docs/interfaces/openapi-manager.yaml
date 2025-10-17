@@ -17,7 +17,7 @@ paths:
       summary: Perform a search query
       operationId: searchQuery
       security:
-        - bearerAuth: []
+        - bearerAuth-JWT: []
       requestBody:
         content:
           application/json:
@@ -61,7 +61,7 @@ paths:
       summary: Provide crawled data
       operationId: crawlData
       security:
-        - bearerAuth: []
+        - bearerAuth-APIKey: []
       requestBody:
         content:
           application/json:
@@ -101,7 +101,7 @@ paths:
       summary: Provide analysis results
       operationId: analyseData
       security:
-        - bearerAuth: []
+        - bearerAuth-APIKey: []
       requestBody:
         content:
           application/json:
@@ -146,7 +146,11 @@ paths:
                     type: string
 components:
   securitySchemes:
-    bearerAuth:
+    bearerAuth-APIKey:
       type: http
       scheme: bearer
       bearerFormat: API Key
+    bearerAuth-JWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
