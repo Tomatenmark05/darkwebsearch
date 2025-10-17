@@ -25,9 +25,9 @@ paths:
               type: object
               required: [content]
               properties:
-                query:
+                content:
                   type: string
-                  description: Search query text
+                  description: Content to be analyzed
       responses:
         "200":
           description: Successful analyzation
