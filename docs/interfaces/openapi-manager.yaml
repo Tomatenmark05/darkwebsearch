@@ -17,7 +17,7 @@ paths:
       summary: Perform a search query
       operationId: searchQuery
       security:
-        - bearerAuth: []
+        - bearerAuth-JWT: []
       requestBody:
         content:
           application/json:
@@ -45,6 +45,8 @@ paths:
                           type: string
                         url:
                           type: string
+                        description:
+                          type: string
         "400":
           description: Invalid request
           content:
@@ -52,31 +54,32 @@ paths:
               schema:
                 type: object
                 properties:
-                  type:
+                  error:
                     type: string
-                  title:
-                    type: string
-                  status:
-                    type: integer
-                  detail:
-                    type: string
-  /crawl:
+  /crawl-results:
     post:
       summary: Provide crawled data
       operationId: crawlData
       security:
-        - bearerAuth: []
+        - bearerAuth-APIKey: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              required: [data]
+              required: [results]
               properties:
-                data:
+                results:
                   type: array
                   items:
                     type: object
+                    properties:
+                      url:
+                        type: string
+                      content:
+                        type: string
+                      metadata:
+                        type: object
       responses:
         "200":
           description: Successful crawl data submission
@@ -91,17 +94,63 @@ paths:
               schema:
                 type: object
                 properties:
-                  type:
+                  error:
                     type: string
-                  title:
-                    type: string
-                  status:
-                    type: integer
-                  detail:
+  /analyse-results:
+    post:
+      summary: Provide analysis results
+      operationId: analyseData
+      security:
+        - bearerAuth-APIKey: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [results]
+              properties:
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      jobId:
+                        type: string
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      url:
+                        type: string
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                      legality:
+                        type: boolean
+      responses:
+        "200":
+          description: Successful analysis results submission
+          content:
+            application/json:
+              schema:
+                type: boolean
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                properties:
+                  error:
                     type: string
 components:
   securitySchemes:
-    bearerAuth:
+    bearerAuth-APIKey:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+    bearerAuth-JWT:
       type: http
       scheme: bearer
       bearerFormat: JWT
