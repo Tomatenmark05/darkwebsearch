@@ -48,7 +48,7 @@ sequenceDiagram
     participant DarknetBrowser as Darknet-Browser
     participant Manager
     participant Crawler
-    participant Datenauswertung
+    participant DataAnalysis
     participant Supabase
 
     %% User search flow
@@ -63,8 +63,8 @@ sequenceDiagram
         Manager->>Crawler: crawl job
         Manager->>Crawler: crawl status
         Crawler->>Manager: crawl results
-        Manager->>Datenauswertung: analyse job
-        Manager->>Datenauswertung: analyse status
-        Datenauswertung->>Manager: analyse result
+        Manager->>DataAnalysis: analyse job
+        Manager->>DataAnalysis: analyse status
+        DataAnalysis->>Manager: analyse result
     end
 ```
