@@ -107,8 +107,8 @@ __pypackages__/
 pyvenv.cfg
 .venv
 pip-selfcheck.json
-env
-venv
+venv/
+env/
 
 ### Windows ###
 # Windows thumbnail cache files
