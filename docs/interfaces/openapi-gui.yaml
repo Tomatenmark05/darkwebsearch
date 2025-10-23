@@ -12,10 +12,10 @@ servers:
     description: Relative server URL
 
 paths:
-  /gui-search:
+  /search:
     post:
       summary: Receive search query from GUI and forward to Manager API
-      operationId: guiSearch
+      operationId: search
       security:
         - bearerAuth-JWT: []
       requestBody:
