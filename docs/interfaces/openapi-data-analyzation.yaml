@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Darkwebsearch - Data Analyzer API
   version: "1.0.0"
-  description: API for analyzing data and create tags in Darkwebsearch.
+  description: API for analyzing data and creating tags in Darkwebsearch.
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -30,7 +30,7 @@ paths:
                   description: Content to be analyzed
       responses:
         "200":
-          description: Successful analyzation
+          description: Successful analysis
           content:
             application/json:
               schema:
@@ -50,7 +50,6 @@ paths:
                     type: string
                   jobId:
                     type: string
-
         "400":
           description: Invalid request
           content:
@@ -60,21 +59,20 @@ paths:
                 properties:
                   error:
                     type: string
+
   /status:
-    post:
-      summary: Provide analyzation status
+    get:
+      summary: Check analysis status
       operationId: analyzationStatus
       security:
         - bearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [jobId]
-              properties:
-                jobId:
-                  type: string
+      parameters:
+        - name: jobId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Job ID to check status for
       responses:
         "200":
           description: Successful status check
@@ -91,6 +89,7 @@ paths:
                 properties:
                   error:
                     type: string
+
 components:
   securitySchemes:
     bearerAuth:

@@ -1,0 +1,9 @@
+services:
+  analyzer:
+    build:
+      context: ./data-analysis/src
+      dockerfile: ../docker/Dockerfile
+    container_name: data_analyzer
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
