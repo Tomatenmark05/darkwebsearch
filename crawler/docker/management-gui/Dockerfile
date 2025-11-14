@@ -4,7 +4,7 @@ RUN mkdir /app
 
 WORKDIR /app
 
-COPY ../src/management-gui /app
+COPY . /app
 
 RUN npm install
 

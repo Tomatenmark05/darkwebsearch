@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  fastapi:
+    build:
+      context: ../src/fastapi
+      dockerfile: ../../docker/fastapi/Dockerfile
+    container_name: fastapi-backend
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  management-gui:
+    build:
+      context: ../src/management-gui
+      dockerfile: ../../docker/management-gui/Dockerfile
+    container_name: management-gui
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
