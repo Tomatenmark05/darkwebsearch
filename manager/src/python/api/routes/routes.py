@@ -1,7 +1,14 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from continous_loop import ContiniousLoop
+from fastapi import APIRouter, Depends, Header, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
+from python.api.db.models import ContentTag, Tag, Content
+from python.api.db.database import get_db
+from sqlalchemy.orm import Session
+import joinedload
+
+from main import loop
 
 router = APIRouter()
 
@@ -14,10 +21,6 @@ class SearchResult(BaseModel):
     title: Optional[str]
     url: Optional[str]
     description: Optional[str]
-
-
-class SearchResponse(BaseModel):
-    results: List[SearchResult]
 
 
 class CrawlItem(BaseModel):
@@ -65,12 +68,27 @@ def _require_apikey(authorization: Optional[str] = Header(None)) -> str:
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(req: SearchRequest, token: str = Depends(_require_jwt)) -> SearchResponse:
-    """Perform a search query. (placeholder)
+async def search(req: SearchRequest, token: str = Depends(_require_jwt), session: Session = Depends(get_db)) -> SearchResponse:
+    # exact match on tag name; use .ilike(f"%{req.query}%") for substring/case-insensitive
+    q = (
+        session.query(Content)
+        .join(ContentTag)          # join association object
+        .join(Tag)                 # join tag
+        .filter(Tag.name.ilike(f"%{req.query}%"))  # filter by tag name
+        .order_by(ContentTag.priority.desc())
+        .distinct(Content.id)      # remove duplicate contents if multiple matching rows
+        .options(joinedload(Content.tag_links).joinedload(ContentTag.tag))  # avoid N+1 when accessing tags
+        .limit(100)
+    )
 
-    TODO: wire up search to DB / search index and return real results.
-    """
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="search not implemented yet")
+    results = []
+    for content in q.all():
+        results.append(SearchResult(
+            title=getattr(content, "title", None) or content.url,
+            url=content.url,
+            description=getattr(content, "description", "")
+        ))
+    return SearchResponse(results=results)
 
 
 @router.post("/crawl-results")
@@ -82,10 +100,29 @@ async def crawl_results(req: CrawlRequest, apikey: str = Depends(_require_apikey
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="crawl-results not implemented yet")
 
 
-@router.post("/analyse-results")
+@router.post("/analyze-results")
 async def analyse_results(req: AnalyseRequest, apikey: str = Depends(_require_apikey)) -> bool:
     """Accept analysis results. (placeholder)
 
     TODO: validate payload, persist analysis results, update indices.
     """
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="analyse-results not implemented yet")
+
+@router.post("/start-loop")
+async def start_loop(background: BackgroundTasks):
+    loop.active = True
+    background.add_Task(ContiniousLoop.continous_loop)
+    return 200
+
+@router.post("/stop-loop")
+async def stop_loop():
+    loop.active = False
+    return 200
+
+
+
+
+
+
+
+

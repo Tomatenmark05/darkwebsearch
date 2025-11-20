@@ -27,11 +27,12 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_HOST: db
-      DATABASE_PORT: 3306
-      DATABASE_NAME: appdb
-      DATABASE_USER: appuser
-      DATABASE_PASSWORD: apppassword
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: appuser
+      MYSQL_DATABASE: appdb
+      MYSQL_PASSWORD: apppassword
+      MYSQL_ROOT_PASSWORD: rootpassword
       PYTHONUNBUFFERED: '1'
     ports:
       - "8000:8000"
