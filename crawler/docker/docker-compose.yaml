@@ -1,7 +1,28 @@
-version: "3.9"
-
 services:
+  tor:
+    image: barneybuffet/tor:latest
+    container_name: tor
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    environment:
+      TOR_LOG_CONFIG: 'false'
+      TOR_PROXY: 'true'
+      TOR_PROXY_PORT: '9050'
+      TOR_PROXY_ACCEPT: 'accept 127.0.0.1'
+      TOR_CONTROL: 'true'
+      TOR_CONTROL_PORT: '9051'
+      TOR_CONTROL_COOKIE: 'true'
+      TOR_SERVICE: 'false'
+    restart: unless-stopped
+    volumes:
+      - tor_data:/tor
+
   fastapi:
+    depends_on:
+      - tor
+    volumes:
+      - tor_data:/tor
     build:
       context: ../src/fastapi
       dockerfile: ../../docker/fastapi/Dockerfile
@@ -18,3 +39,6 @@ services:
     ports:
       - "5173:5173"
     restart: unless-stopped
+
+volumes:
+  tor_data:

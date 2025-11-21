@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from schemas import CrawlRequest
+from  crawler import Crawler
 
 router = APIRouter()
 
@@ -10,8 +11,10 @@ async def start_crawl(request: CrawlRequest):
     if not addresses or len(addresses) == 0:
         raise HTTPException(status_code=400, detail="No addresses provided")
 
-    # Process addresses here
-    return {"received_addresses": addresses}
+    crawler = Crawler()
+    results = crawler.crawl(addresses)
+
+    return {"results": results}
 
 @router.get("/status/{crawl_id}")
 async def get_crawl_status(crawl_id: str):
