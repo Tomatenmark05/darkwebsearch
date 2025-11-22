@@ -5,7 +5,7 @@ from typing import List, Union
 class CrawlRequest(BaseModel):
     addresses: Union[str, List[str]]
 
-    @field_validator("addresses") #pre=True to modify input before validation
+    @field_validator("addresses")
     @classmethod
     def ensure_list(cls, value):
         if isinstance(value, str):

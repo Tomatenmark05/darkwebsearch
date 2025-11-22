@@ -5,8 +5,7 @@ from stem.control import Controller
 
 class Crawler:
     def __init__(self):
-        tor_ip = socket.gethostbyname('tor')
-        print("Resolved tor container IP:", tor_ip)
+        tor_ip = socket.gethostbyname('tor') # Because stem doesn't resolve docker service names and checks for valid IP format
         self.controller = Controller.from_port(address=tor_ip, port=9051)
         self.controller.authenticate()
         self.controller.signal(Signal.NEWNYM)
@@ -21,10 +20,10 @@ class Crawler:
         results = {}
         for url in urls:
             try:
-                response = self.session.get(url, timeout=10)
+                response = self.session.get(url)
                 results[url] = {
                     "status_code": response.status_code,
-                    "content": response.text[:200]  # Store only first 200 chars
+                    "content": response.text
                 }
             except requests.RequestException as e:
                 results[url] = {"error": str(e)}
