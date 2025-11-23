@@ -23,7 +23,7 @@ services:
     build:
       context: ../src/fastapi
       dockerfile: ../../docker/fastapi/Dockerfile
-    container_name: fastapi-backend
+    container_name: crawler
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -32,10 +32,15 @@ services:
     build:
       context: ../src/management-gui
       dockerfile: ../../docker/management-gui/Dockerfile
-    container_name: management-gui
+    container_name: crawler-management-gui
     ports:
       - "5173:5173"
     restart: unless-stopped
 
 volumes:
   tor_data:
+
+networks:
+    default:
+      name: "shared-net"
+      external: true

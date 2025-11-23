@@ -1,31 +1,13 @@
-from continous_loop import ContiniousLoop
 from fastapi import FastAPI
 import logging
 from api.routes.routes import router
 import uvicorn
+from continous_loop import loop
 
 # import your router from routes.py (expects a FastAPI APIRouter named `router`)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-crawler_url = ""
-analyse_url = ""
-crawler_APIKEY = ""
-analyse_APIKEY = ""
-crawl_threads = ""
-analyse_threads = ""
-
-
-loop = ContiniousLoop(
-        crawler_url,
-        analyse_url,
-        crawler_APIKEY,
-        analyse_APIKEY,
-        crawl_threads,
-        analyse_threads
-        )
-
 
 app = FastAPI(title="darkwebsearch-manager", version="0.1.0")
 
@@ -36,7 +18,7 @@ app.include_router(router)
 @app.on_event("startup")
 async def on_startup():
     logger.info("Application startup: initializing resources")
-    continious_loop()
+    loop.continious_loop()
     # Example: initialize DB/clients and store on app.state
     # app.state.db = await init_db()
     # app.state.http = httpx.AsyncClient()

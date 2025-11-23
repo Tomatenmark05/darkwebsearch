@@ -1,14 +1,12 @@
 from typing import List, Optional
 
-from continous_loop import ContiniousLoop
 from fastapi import APIRouter, Depends, Header, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
-from python.api.db.models import ContentTag, Tag, Content
-from python.api.db.database import get_db
-from sqlalchemy.orm import Session
-import joinedload
+from api.db.models import ContentTag, Tag, Content
+from api.db.database import get_db
+from sqlalchemy.orm import Session, joinedload
 
-from main import loop
+from continous_loop import loop
 
 router = APIRouter()
 
@@ -67,8 +65,8 @@ def _require_apikey(authorization: Optional[str] = Header(None)) -> str:
     return _require_jwt(authorization)
 
 
-@router.post("/search", response_model=SearchResponse)
-async def search(req: SearchRequest, token: str = Depends(_require_jwt), session: Session = Depends(get_db)) -> SearchResponse:
+@router.post("/search")
+async def search(req: SearchRequest, token: str = Depends(_require_jwt), session: Session = Depends(get_db)):
     # exact match on tag name; use .ilike(f"%{req.query}%") for substring/case-insensitive
     q = (
         session.query(Content)
@@ -111,7 +109,7 @@ async def analyse_results(req: AnalyseRequest, apikey: str = Depends(_require_ap
 @router.post("/start-loop")
 async def start_loop(background: BackgroundTasks):
     loop.active = True
-    background.add_Task(ContiniousLoop.continous_loop)
+    background.add_task(loop.continious_loop)
     return 200
 
 @router.post("/stop-loop")
