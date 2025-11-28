@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional
 
 class AnalyzeRequest(BaseModel):
+    url: str = Field(..., description="URL of the content to be analyzed")
     content: str = Field(..., description="Content to be analyzed")
     callbackUrl: Optional[HttpUrl] = Field(
         None,

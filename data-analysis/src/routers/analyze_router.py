@@ -76,14 +76,14 @@ def deliver_result(result: AnalysisResult, callback_url: str) -> bool:
     return False
 
 
-def process_job(job_id: str, content: str, callback_url: str):
+def process_job(job_id: str, content: str, url: str, callback_url: str):
     """
     Perform analysis (potentially blocking) and deliver results.
     """
     try:
         # Use to_thread for potential heavy model call (optional)
         analysis_dict = asyncio.run(asyncio.to_thread(analyze_content_sync, content))
-        result = AnalysisResult(**{**analysis_dict, "jobId": job_id})
+        result = AnalysisResult(**{**analysis_dict, "jobId": job_id, "url": url})
         JOB_STORE[job_id]["result"] = result
         JOB_STORE[job_id]["done"] = True
 
@@ -121,7 +121,7 @@ def analyze_data(payload: AnalyzeRequest, background: BackgroundTasks, api_key: 
     }
 
     # Schedule synchronous processing (runs after response is returned)
-    background.add_task(process_job, job_id, payload.content, callback_url)
+    background.add_task(process_job, job_id, payload.content, payload.url, callback_url)
 
     return JobAccepted(jobId=job_id)
 
