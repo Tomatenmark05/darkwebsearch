@@ -45,7 +45,8 @@ def deliver_result(result: AnalysisResult, callback_url: str) -> bool:
     """
     payload = result.model_dump()
     body = json.dumps(payload)
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json",
+               "Authorization": f"Bearer {API_KEY}"} 
 
     if SHARED_SECRET:
         signature = hmac.new(
