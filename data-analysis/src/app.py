@@ -3,8 +3,7 @@ from routers.analyze_router import analyze_router
 
 app = FastAPI()
 
-app.include_router(analyze_router, prefix="/analyze", tags=["analyze"])
-app.include_router(analyze_router, prefix="/status", tags=["status"])
+app.include_router(analyze_router,  tags=["analyze"])
 
 
 
