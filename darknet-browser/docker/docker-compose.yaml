@@ -3,11 +3,12 @@ version: "3.8"
 services:
   sveltgui:
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile
       args:
         VITE_API_BASE: "/analyze"
     environment:
-      DOWNSTREAM_URL: ""      # e.g. http://downstream:9000
+      DOWNSTREAM_URL: ""
       LOG_LEVEL: "info"
     ports:
       - "8080:8080"
