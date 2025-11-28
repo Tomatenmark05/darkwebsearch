@@ -1,0 +1,46 @@
+services:
+  tor:
+    image: barneybuffet/tor:latest
+    container_name: tor
+    environment:
+      TOR_LOG_CONFIG: 'false'
+      TOR_PROXY: 'true'
+      TOR_PROXY_PORT: '0.0.0.0:9050'
+      TOR_PROXY_ACCEPT: 'accept 0.0.0.0/0'
+      TOR_CONTROL: 'true'
+      TOR_CONTROL_PORT: '0.0.0.0:9051'
+      TOR_CONTROL_COOKIE: 'true'
+      TOR_SERVICE: 'false'
+    restart: unless-stopped
+    volumes:
+      - tor_data:/tor
+
+  fastapi:
+    depends_on:
+      - tor
+    volumes:
+      - tor_data:/tor
+    build:
+      context: ./src/fastapi
+      dockerfile: ../../docker/fastapi/Dockerfile
+    container_name: crawler
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  management-gui:
+    build:
+      context: ./src/management-gui
+      dockerfile: ../../docker/management-gui/Dockerfile
+    container_name: crawler-management-gui
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+volumes:
+  tor_data:
+
+networks:
+    default:
+      name: "shared-net"
+      external: true

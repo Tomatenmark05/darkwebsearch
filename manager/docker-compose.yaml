@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  manager-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  manager:
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: appuser
+      MYSQL_DATABASE: appdb
+      MYSQL_PASSWORD: apppassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+      PYTHONUNBUFFERED: '1'
+    ports:
+      - "8000:8000"
+
+  # frontend:
+  #   build: ./svelte
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     VITE_BACKEND_URL: http://backend:8000
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - ./frontend:/app
+  #   command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  db_data:
+
+networks:
+  default:
+    name: shared-net
+    external: "true"
+
+
+
