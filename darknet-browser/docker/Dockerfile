@@ -4,6 +4,7 @@ WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci --silent || npm install --no-audit --no-fund --silent
 
+
 COPY frontend/ ./
 
 ARG VITE_API_BASE=/analyze
