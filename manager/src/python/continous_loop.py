@@ -41,35 +41,49 @@ class ContiniousLoop():
         return "https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion/"
 
     def start_crawljob(self, link):
-        job_id = self.generate_jobId
-
-        link = self.get_crawl_link()
+        # Use provided link; fall back to default if None/empty
+        if not link:
+            link = self.get_crawl_link()
 
         payload = {"addresses": link}
-        #header = { "Authorization": f"Bearer {self.crawler_APIKEY}" }
+        # header = { "Authorization": f"Bearer {self.crawler_APIKEY}" }
 
         response = requests.post(self.crawler_url, json=payload)
 
-        if response.status_code == 200:
+        try:
+            data = response.json()
+        except ValueError:
+            raise Exception(f"Error: Crawler returned non-JSON response (status {response.status_code}): {response.text}")
+
+        job_id = data.get("job_id")
+        if response.status_code == 200 and job_id:
             self.crawler_running_jobs.append(job_id)
-            return response.content
+            # return parsed JSON so downstream code gets a serializable object
+            return data
         else:
-            raise Exception("Error: Crawler Job could not be started")
+            raise Exception(f"Error: Crawler Job could not be started (status {response.status_code}): {response.text}")
 
 
     def start_analysejob(self, content):
-        job_id = self.generate_jobId()
 
-        payload = {content}
-        header = { "Authorization": f"Bearer {self.analyse_APIKEY}" }
+        payload = {"content": content, "callbackUrl": "http://manager:8000/analyse_results"}
 
-        response = requests.post(self.analyse_url, json=payload, headers=header)
+        headers = { "Authorization": f"Bearer {self.analyse_APIKEY}" }
 
-        if response.status_code == 200:
+        response = requests.post(self.analyse_url, json=payload, headers=headers)
+
+        try:
+            data = response.json()
+        except ValueError:
+            raise Exception(f"Error: Analyse returned non-JSON response (status {response.status_code}): {response.text}")
+
+        job_id = data.get("jobId")
+
+        if response.status_code == 200 and job_id:
             self.analyse_running_jobs.append(job_id)
             return True
         else:
-            raise Exception("Error: Analyse Job could not be started")
+            raise Exception(f"Error: Analyse Job could not be started (status {response.status_code}): {response.text}")
 
     @staticmethod
     def generate_jobId():
@@ -82,9 +96,9 @@ class ContiniousLoop():
 
 
 crawler_url = "http://crawler:8080/crawl"
-analyse_url = "http://analyze:8080/analys"
+analyse_url = "http://analyzer:8000/analyze"
 crawler_APIKEY = ""
-analyse_APIKEY = ""
+analyse_APIKEY = "this-is-my-super-secure-api-key"
 crawl_thread = 1
 analyse_thread = 1
 

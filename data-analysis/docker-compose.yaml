@@ -1,7 +1,7 @@
 services:
   analyzer:
     build:
-      context: ./data-analysis/src
+      context: src
       dockerfile: ../docker/Dockerfile
     container_name: data_analyzer
     ports:
@@ -9,3 +9,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+
+networks:
+  default:
+    name: shared-net
+    external: "true"

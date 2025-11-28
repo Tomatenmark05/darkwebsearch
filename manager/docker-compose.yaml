@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  manager-db:
+  db:
     image: mysql:8.0
     restart: unless-stopped
     environment:
@@ -35,7 +35,7 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
       PYTHONUNBUFFERED: '1'
     ports:
-      - "8000:8000"
+      - "8001:8000"
 
   # frontend:
   #   build: ./svelte

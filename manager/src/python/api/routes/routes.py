@@ -1,15 +1,19 @@
 from typing import List, Optional
 
+import os
 from fastapi import APIRouter, Depends, Header, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from api.db.models import ContentTag, Tag, Content
 from api.db.database import get_db
 from sqlalchemy.orm import Session, joinedload
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from continous_loop import loop
 
 router = APIRouter()
 
+API_KEY = os.getenv("API_KEY", "changeme")
+security = HTTPBearer()
 
 class SearchRequest(BaseModel):
     query: str
@@ -20,28 +24,21 @@ class SearchResult(BaseModel):
     url: Optional[str]
     description: Optional[str]
 
-
-class CrawlItem(BaseModel):
+class CrawlResult(BaseModel):
     url: str
     content: str
-    metadata: Optional[dict] = None
 
-
-class CrawlRequest(BaseModel):
-    results: List[CrawlItem]
-
-
-class AnalyseItem(BaseModel):
+class AnalyseResult(BaseModel):
     jobId: Optional[str]
     title: Optional[str]
+    legality: Optional[bool] = None
     description: Optional[str]
     url: Optional[str]
     tags: Optional[List[str]] = None
-    legality: Optional[bool] = None
 
+class SearchRequest(BaseModel):
+    query: str
 
-class AnalyseRequest(BaseModel):
-    results: List[AnalyseItem]
 
 
 def _require_jwt(authorization: Optional[str] = Header(None)) -> str:
@@ -57,12 +54,13 @@ def _require_jwt(authorization: Optional[str] = Header(None)) -> str:
     return parts[1].strip()
 
 
-def _require_apikey(authorization: Optional[str] = Header(None)) -> str:
-    """Placeholder API key auth dependency.
-
-    In production, validate the API key against the DB and enforce scopes/rate limits.
-    """
-    return _require_jwt(authorization)
+def require_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not credentials or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+    token = credentials.credentials
+    if token != API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    return token
 
 
 @router.post("/search")
@@ -86,11 +84,11 @@ async def search(req: SearchRequest, token: str = Depends(_require_jwt), session
             url=content.url,
             description=getattr(content, "description", "")
         ))
-    return SearchResponse(results=results)
+    return SearchResult(results=results)
 
 
 @router.post("/crawl-results")
-async def crawl_results(req: CrawlRequest, apikey: str = Depends(_require_apikey)) -> bool:
+async def crawl_results(req, apikey: str = Depends(require_api_key)) -> bool:
     """Accept crawled data from crawler services. (placeholder)
 
     TODO: validate payload, persist crawl results, create analysis jobs.
@@ -98,13 +96,46 @@ async def crawl_results(req: CrawlRequest, apikey: str = Depends(_require_apikey
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="crawl-results not implemented yet")
 
 
-@router.post("/analyze-results")
-async def analyse_results(req: AnalyseRequest, apikey: str = Depends(_require_apikey)) -> bool:
-    """Accept analysis results. (placeholder)
 
-    TODO: validate payload, persist analysis results, update indices.
-    """
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="analyse-results not implemented yet")
+@router.post("/analyze-results")
+async def analyse_results(req: AnalyseResult, db: Session = Depends(get_db), apikey: str = Depends(require_api_key)) -> bool:
+
+    if not req.tags:
+        required_tags = []
+    else:
+
+        tag_names = set(req.tags)
+        existing_tags = db.query(Tag).filter(Tag.name.in_(tag_names)).all()
+
+        existing_names = {tag.name for tag in existing_tags}
+        missing_names = tag_names - existing_names
+
+        new_tags = [Tag(name=name) for name in missing_names]
+
+        if new_tags:
+            db.add_all(new_tags)
+
+        required_tags = existing_tags + new_tags
+
+    new_content = Content(
+        url = req.url,
+        title = req.title,
+        description = req.description,
+        # Assign the list of Tag objects directly to the 'tags' proxy
+        tags = required_tags
+    )
+
+    db.add(new_content)
+
+    try:
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving content: {e}")
+        return False
+
+
 
 @router.post("/start-loop")
 async def start_loop(background: BackgroundTasks):
