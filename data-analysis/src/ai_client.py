@@ -68,17 +68,12 @@ def analyze_fallback(content: str) -> Dict[str, Any]:
     legality = not any(k in content.lower() for k in illegal_keywords)
 
     description = re.sub(r"\s+", " ", content).strip()[:300]  # crude summary
-    url = None
-    m = re.search(r"https?://[^\s'\"]+", content)
-    if m:
-        url = m.group(0)
 
     return {
         "tags": tags,
         "title": first_line,
         "legality": legality,
         "description": description,
-        "url": url,
     }
 
 
@@ -91,7 +86,6 @@ def _format_system_prompt() -> str:
         "title: short title summarizing content\n"
         "legality: boolean true if legal, false if likely illegal or illicit\n"
         "description: concise description\n"
-        "url: optional string or null\n"
         "Return strictly valid JSON. No prose."
     )
 
@@ -123,8 +117,7 @@ def _new_client_completion(content: str) -> Dict[str, Any]:
         "title": parsed.get("title"),
         "legality": bool(parsed.get("legality")),
         "description": parsed.get("description"),
-        "url": parsed.get("url"),
-    }
+            }
 
 
 def analyze_with_openai(content: str) -> Dict[str, Any]:
