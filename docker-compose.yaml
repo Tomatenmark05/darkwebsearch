@@ -1,5 +1,11 @@
-# network.yml
-networks:
-  shared-net:
-    driver: bridge
-
+services:
+  analyzer:
+    build:
+      context: ./data-analysis/src
+      dockerfile: ../docker/Dockerfile
+    container_name: data_analyzer
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
