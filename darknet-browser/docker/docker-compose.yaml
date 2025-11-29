@@ -1,15 +1,23 @@
-version: "3.8"
-
+# darknet-browser/docker/docker-compose.yaml
 services:
-  sveltgui:
+  sveltekitgui:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      args:
-        VITE_API_BASE: "/analyze"
+      context: ../src/sveltekitgui
+      dockerfile: Dockerfile
+    container_name: sveltekit-gui
+    ports:
+      - "5173:5173"
     environment:
-      DOWNSTREAM_URL: ""
-      LOG_LEVEL: "info"
+      - VITE_SUPABASE_URL=your_supabase_url
+      - VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+      - VITE_API_URL=http://fastapi:8080
+    restart: unless-stopped
+
+  fastapi:
+    build:
+      context: ../src/fastapi
+      dockerfile: Dockerfile
+    container_name: fastapi-backend
     ports:
       - "8080:8080"
     restart: unless-stopped
