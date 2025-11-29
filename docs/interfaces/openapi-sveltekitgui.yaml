@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  title: Darkwebsearch - GUI API
+  version: "1.0.0"
+  
+servers:
+  - url: /
+
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+        "401":
+          description: Invalid credentials
+
+  /search:
+    post:
+      summary: Search dark web data
+      operationId: searchData
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+      responses:
+        "200":
+          description: Search results
+        "401":
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
