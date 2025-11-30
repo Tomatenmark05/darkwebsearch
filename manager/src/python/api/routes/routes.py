@@ -124,12 +124,15 @@ async def analyse_results(req: AnalyseResult, db: Session = Depends(get_db)) -> 
 
         required_tags = existing_tags + new_tags
 
+    # Build Content with association objects (ContentTag) so SQLAlchemy knows how to
+    # populate the relationship. Assigning Tag objects directly to the `tags` proxy
+    # requires a creator on the association_proxy; create ContentTag instances here
+    # to avoid a TypeError when SQLAlchemy tries to call the mapped class constructor.
     new_content = Content(
         url = req.url,
         title = req.title,
         description = req.description,
-        # Assign the list of Tag objects directly to the 'tags' proxy
-        tags = required_tags
+        tag_links = [ContentTag(tag=tag) for tag in required_tags]
     )
 
     db.add(new_content)
