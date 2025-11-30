@@ -92,7 +92,6 @@ async def search(req: SearchRequest, token: str = Depends(_require_jwt), session
 async def crawl_results(req: CrawlResult) -> bool:
     if req.url and req.job_id and req.content:
         loop.crawler_running_jobs.remove(req.job_id)
-        print(req.url, req.content)
         status = loop.start_analysejob(req.content)
 
     if status:
@@ -124,10 +123,7 @@ async def analyse_results(req: AnalyseResult, db: Session = Depends(get_db)) -> 
 
         required_tags = existing_tags + new_tags
 
-    # Build Content with association objects (ContentTag) so SQLAlchemy knows how to
-    # populate the relationship. Assigning Tag objects directly to the `tags` proxy
-    # requires a creator on the association_proxy; create ContentTag instances here
-    # to avoid a TypeError when SQLAlchemy tries to call the mapped class constructor.
+
     new_content = Content(
         url = req.url,
         title = req.title,

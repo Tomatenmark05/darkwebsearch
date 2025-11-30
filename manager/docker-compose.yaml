@@ -4,11 +4,8 @@ services:
   db:
     image: mysql:8.0
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: appdb
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppassword
+    env_file:
+      - .env
     volumes:
       - db_data:/var/lib/mysql
     ports:
@@ -26,14 +23,8 @@ services:
     restart: unless-stopped
     depends_on:
       - db
-    environment:
-      MYSQL_HOST: db
-      MYSQL_PORT: 3306
-      MYSQL_USER: appuser
-      MYSQL_DATABASE: appdb
-      MYSQL_PASSWORD: apppassword
-      MYSQL_ROOT_PASSWORD: rootpassword
-      PYTHONUNBUFFERED: '1'
+    env_file:
+      - .env
     ports:
       - "8001:8000"
 
