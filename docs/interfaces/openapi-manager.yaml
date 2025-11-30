@@ -74,12 +74,16 @@ paths:
                   items:
                     type: object
                     properties:
-                      url:
+                      job_id:
                         type: string
                       content:
-                        type: string
-                      metadata:
                         type: object
+                        properties:
+                          url:
+                            type: string
+                          data:
+                            type: string
+
       responses:
         "200":
           description: Successful crawl data submission
