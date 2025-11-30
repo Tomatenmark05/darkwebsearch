@@ -26,6 +26,7 @@ class SearchResult(BaseModel):
 
 class CrawlResult(BaseModel):
     url: str
+    job_id: str
     content: str
 
 class AnalyseResult(BaseModel):
@@ -88,17 +89,23 @@ async def search(req: SearchRequest, token: str = Depends(_require_jwt), session
 
 
 @router.post("/crawl-results")
-async def crawl_results(req, apikey: str = Depends(require_api_key)) -> bool:
-    """Accept crawled data from crawler services. (placeholder)
+async def crawl_results(req: CrawlResult) -> bool:
+    if req.url and req.job_id and req.content:
+        loop.crawler_running_jobs.remove(req.job_id)
+        print(req.url, req.content)
+        status = loop.start_analysejob(req.content)
 
-    TODO: validate payload, persist crawl results, create analysis jobs.
-    """
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="crawl-results not implemented yet")
+    if status:
+        print("Successfully started analyse Job")
+        return True
+    else:
+        print("Error starting analyse Job")
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="crawl-results not implemented yet")
 
 
 
 @router.post("/analyze-results")
-async def analyse_results(req: AnalyseResult, db: Session = Depends(get_db), apikey: str = Depends(require_api_key)) -> bool:
+async def analyse_results(req: AnalyseResult, db: Session = Depends(get_db)) -> bool:
 
     if not req.tags:
         required_tags = []

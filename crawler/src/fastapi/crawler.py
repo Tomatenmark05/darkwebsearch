@@ -23,6 +23,7 @@ class Crawler:
         }
 
     def _perform_crawl(self, job_id: str, urls: List[str]):
+        print("Crawling url: ", urls)
         JOB_STORE[job_id]['status'] = 'running'
         results: Dict[str, str] = {}
 
@@ -37,13 +38,34 @@ class Crawler:
         JOB_STORE[job_id]['finished_at'] = time.time()
         JOB_STORE[job_id]['results'] = results
 
+        print(results)
+
         try:
-            resp = requests.post("http://manager:8080/crawl-results", json={
+            print("Send results to Manager")
+
+            headers = { "Authorization": f"Bearer changeme" }
+            # `results` is a dict mapping url -> response (or error). The manager expects
+            # `content` to be a string, so send the crawled HTML/text for the URL we posted
+            # in `url` (urls[0]). If the crawl produced an error dict, stringify it.
+            first_url = urls[0]
+            content_for_manager = results.get(first_url)
+            if not isinstance(content_for_manager, str):
+                # convert error dict or other structures to a JSON string
+                try:
+                    import json
+                    content_for_manager = json.dumps(content_for_manager)
+                except Exception:
+                    content_for_manager = str(content_for_manager)
+
+            resp = requests.post("http://manager:8000/crawl-results", json={
+                'url': first_url,
                 'job_id': job_id,
-                'content': results,
-            }, timeout=10)
+                'content': content_for_manager,
+            }, headers=headers, timeout=10)
         except Exception as exc:
+            print(exc)
             pass
+
 
     def start_crawl(self, urls: List[str]) -> str:
         job_id = str(uuid.uuid4())

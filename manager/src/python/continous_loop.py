@@ -1,4 +1,6 @@
 import threading
+import time
+import asyncio
 import secrets
 import string
 import requests
@@ -24,18 +26,15 @@ class ContiniousLoop():
         self.awaiting_contents = []
 
 
-    def continious_loop(self):
+    async def continious_loop(self):
         while self.active:
             print("Loop start")
+            print(self.crawler_running_jobs)
             if len(self.crawler_running_jobs) < self.crawl_thread:
                 link = self.get_crawl_link()
                 content = self.start_crawljob(link)
                 self.awaiting_contents.append(content)
-
-            if len(self.analyse_running_jobs) < self.analyse_threads and self.awaiting_contents:
-                content = self.awaiting_contents.pop(0)
-                results = self.start_analysejob(content)
-
+            await asyncio.sleep(1)
 
     def get_crawl_link(self):
         return "https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion/"
@@ -66,7 +65,7 @@ class ContiniousLoop():
 
     def start_analysejob(self, content):
 
-        payload = {"content": content, "callbackUrl": "http://manager:8000/analyse_results"}
+        payload = {"content": content}
 
         headers = { "Authorization": f"Bearer {self.analyse_APIKEY}" }
 
@@ -79,7 +78,7 @@ class ContiniousLoop():
 
         job_id = data.get("jobId")
 
-        if response.status_code == 200 and job_id:
+        if response.status_code == 202 and job_id:
             self.analyse_running_jobs.append(job_id)
             return True
         else:
