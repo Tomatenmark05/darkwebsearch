@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 import time
 from stem import Signal
 from stem.control import Controller
+import json
 
 JOB_STORE: Dict[str, Dict] = {}
 
@@ -47,21 +48,12 @@ class Crawler:
             # `results` is a dict mapping url -> response (or error). The manager expects
             # `content` to be a string, so send the crawled HTML/text for the URL we posted
             # in `url` (urls[0]). If the crawl produced an error dict, stringify it.
-            first_url = urls[0]
-            content_for_manager = results.get(first_url)
-            if not isinstance(content_for_manager, str):
-                # convert error dict or other structures to a JSON string
-                try:
-                    import json
-                    content_for_manager = json.dumps(content_for_manager)
-                except Exception:
-                    content_for_manager = str(content_for_manager)
-
-            resp = requests.post("http://manager:8000/crawl-results", json={
-                'url': first_url,
-                'job_id': job_id,
-                'content': content_for_manager,
-            }, headers=headers, timeout=10)
+            for key, value in results.items():
+                resp = requests.post("http://manager:8000/crawl-results", json={
+                    'url': key,
+                    'job_id': job_id,
+                    'content': value,
+                }, headers=headers, timeout=10)
         except Exception as exc:
             print(exc)
             pass
