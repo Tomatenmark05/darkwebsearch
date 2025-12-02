@@ -1,24 +1,36 @@
 version: '3.8'
 
 services:
-  sveltekit-gui:
+  darkweb-gui:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    container_name: darkweb-gui
     ports:
       - "3000:3000"
     environment:
-      - MANAGER_SERVICE_URL=http://manager:3001
       - NODE_ENV=production
       - PORT=3000
+      - MANAGER_SERVICE_URL=http://manager:3001
+      # Supabase Environment Variables
+      - PUBLIC_SUPABASE_URL=https://owddlfgtopfeqbkmwsox.supabase.co
+      - PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93ZGRsZmd0b3BmZXFia213c294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODg1MTAsImV4cCI6MjA4MDI2NDUxMH0.mMKdgjR0bItJ3Kxrcn6FDWWnlSPAOq1IxodwFb2C0Ak
     networks:
       - darkweb-network
+    restart: unless-stopped
 
   manager:
     image: node:18-alpine
-    command: sh -c "echo 'Manager service would be running on port 3001' && sleep infinity"
+    container_name: manager-service
+    command: >
+      sh -c "echo 'Manager service would run on port 3001' &&
+             echo 'Waiting for GUI connection...' &&
+             sleep infinity"
+    environment:
+      - PORT=3001
     networks:
       - darkweb-network
+    restart: unless-stopped
 
 networks:
   darkweb-network:

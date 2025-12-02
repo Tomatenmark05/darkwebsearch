@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "vite dev --host",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host",
     "check": "svelte-check"
   },
   "devDependencies": {
@@ -16,6 +16,6 @@
     "vite": "^4.5.0"
   },
   "dependencies": {
-    "dotenv": "^16.3.1"
+    "@supabase/supabase-js": "^2.38.0"
   }
 }

@@ -1,371 +1,303 @@
 <script>
-  let query = '';
-  let loading = false;
-  let results = [];
-  let error = null;
-  let connectionStatus = 'INITIALIZING';
-  let packetCount = 0;
-  let encryptionLevel = 'AES-256';
+  import { goto } from '$app/navigation'
+  import { supabase, logSearch } from '$lib/supabase'
+  import { onMount } from 'svelte'
   
-  // Search history
-  let searchHistory = [
-    "TOR NETWORK",
-    "ONION ROUTING",
-    "END-TO-END ENCRYPTION",
-    "ZERO-KNOWLEDGE PROOFS",
-    "QUANTUM RESISTANCE"
-  ];
+  // Authentication state
+  let session = null
+  let authLoading = true
   
-  // Connection simulation
-  function simulateConnection() {
-    const protocols = ['TCP_HANDSHAKE', 'TLS_NEGOTIATION', 'ENCRYPTION_LAYER', 'ROUTING_ESTABLISHED'];
-    let i = 0;
-    
-    const interval = setInterval(() => {
-      connectionStatus = protocols[i];
-      packetCount += Math.floor(Math.random() * 50) + 10;
-      i++;
+  // Search state
+  let query = ''
+  let loading = false
+  let results = []
+  let error = null
+  
+  // Session refresh function
+  async function refreshSession() {
+    try {
+      const { data, error } = await supabase.auth.getSession()
       
-      if (i >= protocols.length) {
-        clearInterval(interval);
-        connectionStatus = 'SECURE_CONNECTION_ESTABLISHED';
+      if (error) {
+        console.error('Session refresh error:', error)
+        return null
       }
-    }, 400);
+      
+      if (!data.session) {
+        return null
+      }
+      
+      return data.session
+    } catch (error) {
+      console.error('Failed to refresh session:', error)
+      return null
+    }
   }
+  
+  let sessionCheckInterval
+  
+  // On mount - check authentication
+  onMount(async () => {
+    const { data } = await supabase.auth.getSession()
+    
+    if (!data.session) {
+      goto('/login')
+      return
+    }
+    
+    session = data.session
+    authLoading = false
+    
+    // Periodic session check
+    sessionCheckInterval = setInterval(async () => {
+      const freshSession = await refreshSession()
+      if (freshSession) {
+        session = freshSession
+      } else {
+        goto('/login')
+      }
+    }, 4 * 60 * 1000)
+    
+    return () => {
+      if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval)
+      }
+    }
+  })
   
   // Execute search
   async function executeSearch() {
-    if (!query.trim()) return;
+    if (!query.trim()) return
     
-    loading = true;
-    error = null;
-    results = [];
-    packetCount = 0;
+    // Refresh session before search
+    const freshSession = await refreshSession()
     
-    // Start connection simulation
-    simulateConnection();
+    if (!freshSession) {
+      error = '[AUTH ERROR] SESSION EXPIRED'
+      setTimeout(() => goto('/login'), 1500)
+      return
+    }
+    
+    session = freshSession
+    loading = true
+    error = null
+    results = []
     
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       const response = await fetch('/api/search', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-Request-ID': generateId(),
-          'X-Encryption': encryptionLevel
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ 
           query: query.trim(),
-          protocol: 'TORv3',
           timestamp: Date.now()
         })
-      });
+      })
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (response.status === 401) {
+          throw new Error('AUTHENTICATION FAILED')
+        }
+        throw new Error(`HTTP ${response.status}`)
       }
       
-      const data = await response.json();
+      const data = await response.json()
       
       if (data.error) {
-        throw new Error(`SERVER: ${data.error}`);
+        throw new Error(`SERVER: ${data.error}`)
       }
       
-      results = data.results || [];
+      results = data.results || []
       
-      // Update history
-      if (!searchHistory.includes(query.trim().toUpperCase())) {
-        searchHistory = [query.trim().toUpperCase(), ...searchHistory.slice(0, 7)];
-      }
+      // Log search to database
+      await logSearch(session.user.id, query.trim(), results.length)
       
     } catch (err) {
-      error = `[ERROR] ${err.message}`;
-      connectionStatus = 'CONNECTION_FAILED';
-    } finally {
-      loading = false;
-      if (!error) {
-        connectionStatus = 'READY';
+      error = `[ERROR] ${err.message}`
+      
+      if (err.message.includes('AUTHENTICATION') || err.message.includes('SESSION')) {
+        setTimeout(() => goto('/login'), 2000)
       }
+    } finally {
+      loading = false
     }
-  }
-  
-  // Utility functions
-  function generateId() {
-    const chars = '0123456789ABCDEF';
-    let id = '';
-    for (let i = 0; i < 16; i++) {
-      id += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return id;
-  }
-  
-  function loadFromHistory(item) {
-    query = item;
-    executeSearch();
   }
   
   function clearInterface() {
-    query = '';
-    results = [];
-    error = null;
-    connectionStatus = 'STANDBY';
+    query = ''
+    results = []
+    error = null
+  }
+  
+  async function handleLogout() {
+    if (sessionCheckInterval) {
+      clearInterval(sessionCheckInterval)
+    }
+    
+    await supabase.auth.signOut()
+    
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('supabase.auth.token')
+    }
+    
+    goto('/login')
   }
   
   function handleKeyPress(e) {
     if (e.key === 'Enter' && !loading && query.trim()) {
-      executeSearch();
+      executeSearch()
     }
     if (e.key === 'Escape') {
-      clearInterface();
-    }
-    if (e.key === 'Tab' && query.trim()) {
-      e.preventDefault();
-      // Simple auto-complete
-      const match = searchHistory.find(h => 
-        h.toLowerCase().startsWith(query.toLowerCase())
-      );
-      if (match) query = match;
+      clearInterface()
     }
   }
-  
-  // Initialize
-  setTimeout(() => {
-    connectionStatus = 'SYSTEM_READY';
-  }, 1000);
 </script>
 
-<div class="terminal-interface">
-  <!-- System Header -->
-  <header class="system-header">
-    <div class="header-left">
-      <div class="system-id">
-        <span class="prompt">&gt;&gt;</span>
-        <span class="system-name">DARKWEB_BROWSER</span>
-        <span class="system-version">[v1.0.3]</span>
+{#if authLoading}
+  <div class="auth-loading">
+    <div class="terminal-loading">
+      <div class="loading-dots">
+        {#each Array(3) as _, i}
+          <div class="loading-dot" style={`animation-delay: ${i * 0.2}s`}></div>
+        {/each}
       </div>
-      <div class="system-status">
-        <span class="status-label">STATUS:</span>
-        <span class="status-value {connectionStatus === 'READY' ? 'active' : ''}">
-          {connectionStatus}
-        </span>
-      </div>
+      <div class="loading-text">INITIALIZING...</div>
     </div>
-    
-    <div class="header-right">
-      <div class="system-metrics">
-        <div class="metric">
-          <span class="metric-label">PACKETS:</span>
-          <span class="metric-value">{packetCount}</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">ENCRYPTION:</span>
-          <span class="metric-value">{encryptionLevel}</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">TIME:</span>
-          <span class="metric-value">{new Date().toLocaleTimeString('de-DE', {hour12: false})}</span>
-        </div>
-      </div>
-    </div>
-  </header>
-  
-  <!-- Connection Monitor -->
-  <div class="connection-monitor">
-    <div class="monitor-bar">
-      <div class="progress-track">
-        <div 
-          class="progress-indicator" 
-          class:active={loading}
-          style={`width: ${loading ? '100%' : '0%'}`}
-        ></div>
-      </div>
-      <div class="protocol-info">
-        <span>PROTOCOL: TOR/ONION</span>
-        <span>LATENCY: {loading ? '<CALCULATING>' : '<STANDBY>'}</span>
-        <span>NODES: {loading ? '3' : '0'}</span>
+  </div>
+{:else if !session}
+  <div class="access-denied">
+    <div class="denied-terminal">
+      <div class="denied-message">
+        [ACCESS DENIED] REDIRECTING...
       </div>
     </div>
   </div>
-  
-  <!-- Main Interface -->
-  <main class="main-interface">
-    <!-- Query Section -->
-    <section class="query-section">
-      <div class="section-header">
-        <span class="section-title">[QUERY_INTERFACE]</span>
-        <span class="section-help">[TAB: AUTOCOMPLETE | ESC: CLEAR | ENTER: EXECUTE]</span>
+{:else}
+  <div class="terminal-interface">
+    <!-- Header - VEREINFACHT: Nur System Name -->
+    <header class="header">
+      <div class="system-id">
+        <span class="prompt">&gt;&gt;</span>
+        <span class="system-name">DARKWEB_BROWSER</span>
       </div>
-      
-      <div class="input-container">
-        <div class="input-prompt">
-          <span class="cursor">_</span>
-          <span class="prompt-text">SEARCH&gt;</span>
-        </div>
-        
-        <input
-          type="text"
-          bind:value={query}
-          on:keydown={handleKeyPress}
-          placeholder="ENTER SEARCH PARAMETERS..."
-          class="terminal-input"
-          disabled={loading}
-          spellcheck="false"
-          autocorrect="off"
-          autocomplete="off"
-        />
-        
-        <div class="input-actions">
-          <button
-            on:click={executeSearch}
-            class="action-button execute"
-            disabled={loading || !query.trim()}
-            title="Execute Query"
-          >
-            <span class="button-label">EXECUTE</span>
-            <span class="button-hint">[ENTER]</span>
-          </button>
-          
-          <button
-            on:click={clearInterface}
-            class="action-button clear"
-            title="Clear Interface"
-          >
-            <span class="button-label">CLEAR</span>
-            <span class="button-hint">[ESC]</span>
-          </button>
-        </div>
+      <div class="user-display">
+        <span class="user-name">{session.user.email.split('@')[0]}</span>
+        <button on:click={handleLogout} class="logout-button">
+          LOGOUT
+        </button>
       </div>
-      
-      <!-- Search History -->
-      {#if searchHistory.length > 0}
-        <div class="history-section">
-          <div class="history-header">
-            <span class="history-title">[QUERY_HISTORY]</span>
-            <span class="history-count">({searchHistory.length} ENTRIES)</span>
-          </div>
-          <div class="history-grid">
-            {#each searchHistory as item}
-              <button
-                on:click={() => loadFromHistory(item)}
-                class="history-item"
-                title={`Load: ${item}`}
-              >
-                <span class="item-prefix">&gt;</span>
-                <span class="item-text">{item}</span>
-              </button>
-            {/each}
-          </div>
-        </div>
-      {/if}
-    </section>
+    </header>
     
-    <!-- Results Section -->
-    <section class="results-section">
-      <div class="section-header">
-        <span class="section-title">[RESULTS_OUTPUT]</span>
-        <span class="section-stats">
-          {#if results.length > 0}
-            FOUND: {results.length} MATCHES | QUERY: "{query}"
-          {:else if query && !loading}
-            NO MATCHES FOUND | QUERY: "{query}"
-          {:else}
-            AWAITING INPUT...
-          {/if}
-        </span>
-      </div>
-      
-      <!-- Error Display -->
-      {#if error}
-        <div class="error-container">
-          <div class="error-header">
-            <span class="error-icon">[X]</span>
-            <span class="error-title">SYSTEM ALERT</span>
+    <!-- Main Interface -->
+    <main class="main-interface">
+      <!-- Search Section -->
+      <section class="search-section">
+        <div class="search-container">
+          <div class="search-input-group">
+            <div class="input-prompt">
+              <span class="cursor">_</span>
+              <span class="prompt-text">SEARCH&gt;</span>
+            </div>
+            
+            <input
+              type="text"
+              bind:value={query}
+              on:keydown={handleKeyPress}
+              placeholder="ENTER SEARCH QUERY..."
+              class="terminal-input"
+              disabled={loading}
+              spellcheck="false"
+              autocorrect="off"
+              autocomplete="off"
+            />
           </div>
-          <div class="error-message">
-            {error}
+          
+          <div class="search-buttons">
+            <button
+              on:click={executeSearch}
+              class="action-button execute"
+              disabled={loading || !query.trim()}
+              title="Execute Search (ENTER)"
+            >
+              <span class="button-text">
+                {loading ? 'SEARCHING...' : 'EXECUTE'}
+              </span>
+              <span class="button-hint">[ENTER]</span>
+            </button>
+            
+            <button
+              on:click={clearInterface}
+              class="action-button clear"
+              title="Clear (ESC)"
+            >
+              <span class="button-text">CLEAR</span>
+              <span class="button-hint">[ESC]</span>
+            </button>
           </div>
         </div>
-      {/if}
+        
+        <!-- Error Display -->
+        {#if error}
+          <div class="error-container">
+            <div class="error-icon">[!]</div>
+            <div class="error-text">{error}</div>
+          </div>
+        {/if}
+      </section>
       
-      <!-- Results Grid -->
-      {#if results.length > 0}
-        <div class="results-grid">
-          {#each results as result, i}
-            <div class="result-card">
-              <div class="result-header">
-                <span class="result-id">RESULT_{String(i + 1).padStart(3, '0')}</span>
-                <span class="result-source">[{result.source || 'UNKNOWN_SOURCE'}]</span>
-              </div>
-              
-              <div class="result-title">
-                {result.title || 'UNTITLED_RESOURCE'}
-              </div>
-              
-              {#if result.description}
-                <div class="result-description">
-                  {result.description}
+      <!-- Results Section -->
+      <section class="results-section">
+        {#if results.length > 0}
+          <div class="results-header">
+            <span class="results-title">SEARCH RESULTS ({results.length})</span>
+          </div>
+          
+          <div class="results-grid">
+            {#each results as result, i}
+              <div class="result-card">
+                <div class="result-title">
+                  {result.title || 'UNTITLED'}
                 </div>
-              {/if}
-              
-              <div class="result-footer">
-                <span class="result-timestamp">
-                  {result.timestamp ? new Date(result.timestamp).toLocaleString('de-DE') : 'TIMESTAMP_UNAVAILABLE'}
-                </span>
-                {#if result.relevance}
-                  <span class="result-relevance">
-                    RELEVANCE: {(result.relevance * 100).toFixed(1)}%
-                  </span>
+                
+                {#if result.description}
+                  <div class="result-description">
+                    {result.description}
+                  </div>
                 {/if}
               </div>
-              
-              {#if result.url}
-                <div class="result-actions">
-                  <a 
-                    href={result.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="result-link"
-                  >
-                    ACCESS_RESOURCE [EXTERNAL]
-                  </a>
-                </div>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      {:else if loading}
-        <div class="loading-container">
-          <div class="loading-animation">
-            <div class="loading-dots">
-              {#each Array(3) as _, i}
-                <div class="loading-dot" style={`animation-delay: ${i * 0.2}s`}></div>
-              {/each}
-            </div>
-            <div class="loading-text">
-              ESTABLISHING SECURE CONNECTION...
+            {/each}
+          </div>
+        {:else if loading}
+          <div class="loading-container">
+            <div class="loading-animation">
+              <div class="loading-dots">
+                {#each Array(3) as _, i}
+                  <div class="loading-dot" style={`animation-delay: ${i * 0.2}s`}></div>
+                {/each}
+              </div>
+              <div class="loading-text">
+                PROCESSING REQUEST...
+              </div>
             </div>
           </div>
-        </div>
-      {/if}
-    </section>
-  </main>
-  
-  <!-- System Footer -->
-  <footer class="system-footer">
-    <div class="footer-left">
+        {:else if query && !loading}
+          <div class="no-results">
+            NO RESULTS FOUND FOR "{query}"
+          </div>
+        {/if}
+      </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer">
       <span class="footer-text">
-        DARKWEB BROWSER v1.0 | SECURE SEARCH INTERFACE
+        DARKWEB BROWSER | SECURE SEARCH INTERFACE
       </span>
-    </div>
-    <div class="footer-right">
-      <span class="footer-warning">
-        [!] FOR AUTHORIZED RESEARCH ONLY [!]
-      </span>
-    </div>
-  </footer>
-</div>
+    </footer>
+  </div>
+{/if}
 
 <style>
   /* Terminal Interface Container */
@@ -374,26 +306,16 @@
     display: flex;
     flex-direction: column;
     background: var(--bg-primary);
-    border: 1px solid var(--border-dim);
-    margin: 0;
-    position: relative;
   }
   
-  /* System Header */
-  .system-header {
+  /* Header - VEREINFACHT */
+  .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.8rem 1.5rem;
+    padding: 1rem 1.5rem;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-primary);
-    box-shadow: var(--glow);
-  }
-  
-  .header-left, .header-right {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
   }
   
   .system-id {
@@ -413,152 +335,67 @@
     letter-spacing: 1px;
   }
   
-  .system-version {
-    color: var(--text-dim);
-    font-size: 0.9em;
-  }
-  
-  .system-status {
+  .user-display {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .status-label {
-    color: var(--text-dim);
-  }
-  
-  .status-value {
-    color: var(--text-secondary);
-    padding: 0.2rem 0.6rem;
-    border: 1px solid var(--border-dim);
-    background: var(--bg-tertiary);
-    min-width: 150px;
-    text-align: center;
-  }
-  
-  .status-value.active {
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-    box-shadow: var(--terminal-glow);
-  }
-  
-  .system-metrics {
-    display: flex;
     gap: 1.5rem;
   }
   
-  .metric {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-  
-  .metric-label {
+  .user-name {
     color: var(--text-dim);
-    font-size: 0.8em;
+    font-size: 0.9em;
+    text-transform: lowercase;
   }
   
-  .metric-value {
-    color: var(--text-primary);
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-  }
-  
-  /* Connection Monitor */
-  .connection-monitor {
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-dim);
-    padding: 0.5rem 1.5rem;
-  }
-  
-  .monitor-bar {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .progress-track {
-    height: 4px;
-    background: var(--bg-secondary);
+  .logout-button {
+    padding: 0.4rem 1rem;
+    background: transparent;
     border: 1px solid var(--border-dim);
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .progress-indicator {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent-dark), var(--accent-primary));
-    transition: width 0.3s ease;
-  }
-  
-  .progress-indicator.active {
-    background: linear-gradient(90deg, var(--accent-dark), var(--accent-primary), var(--accent-dark));
-    background-size: 200% 100%;
-    animation: progress-glow 2s linear infinite;
-  }
-  
-  @keyframes progress-glow {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-  
-  .protocol-info {
-    display: flex;
-    justify-content: space-between;
     color: var(--text-dim);
-    font-size: 0.85em;
+    font-family: inherit;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .logout-button:hover {
+    border-color: var(--error);
+    color: var(--error);
   }
   
   /* Main Interface */
   .main-interface {
     flex: 1;
-    padding: 1.5rem;
+    padding: 2rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    overflow-y: auto;
   }
   
-  /* Query Section */
-  .query-section {
+  /* Search Section */
+  .search-section {
     border: 1px solid var(--border-dim);
     background: var(--bg-secondary);
-    padding: 1rem;
+    padding: 1.5rem;
   }
   
-  .section-header {
+  .search-container {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 0.8rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border-dim);
+    flex-direction: column;
+    gap: 1rem;
   }
   
-  .section-title {
-    color: var(--accent-primary);
-    font-weight: bold;
-    letter-spacing: 0.5px;
-  }
-  
-  .section-help {
-    color: var(--text-dim);
-    font-size: 0.85em;
-  }
-  
-  .input-container {
+  .search-input-group {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1.5rem;
   }
   
   .input-prompt {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    min-width: 120px;
+    min-width: 100px;
   }
   
   .cursor {
@@ -592,22 +429,23 @@
     color: var(--text-dim);
   }
   
-  .input-actions {
+  .search-buttons {
     display: flex;
-    gap: 0.8rem;
+    gap: 1rem;
+    justify-content: flex-end;
   }
   
   .action-button {
-    padding: 0.8rem 1.5rem;
+    padding: 0.8rem 2rem;
     border: 1px solid var(--border-dim);
     background: var(--bg-tertiary);
     color: var(--text-primary);
     font-family: inherit;
-    font-size: 0.9em;
+    font-size: 1em;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
     transition: all 0.2s ease;
   }
   
@@ -626,11 +464,7 @@
     border-color: var(--accent-secondary);
   }
   
-  .action-button.clear {
-    background: var(--bg-tertiary);
-  }
-  
-  .button-label {
+  .button-text {
     font-weight: bold;
   }
   
@@ -639,90 +473,15 @@
     font-size: 0.8em;
   }
   
-  /* History Section */
-  .history-section {
-    border-top: 1px solid var(--border-dim);
-    padding-top: 1rem;
-  }
-  
-  .history-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.8rem;
-  }
-  
-  .history-title {
-    color: var(--text-secondary);
-  }
-  
-  .history-count {
-    color: var(--text-dim);
-    font-size: 0.9em;
-  }
-  
-  .history-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  
-  .history-item {
-    padding: 0.5rem 1rem;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-dim);
-    color: var(--text-secondary);
-    font-family: inherit;
-    font-size: 0.9em;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s ease;
-  }
-  
-  .history-item:hover {
-    border-color: var(--accent-primary);
-    color: var(--accent-primary);
-  }
-  
-  .item-prefix {
-    color: var(--accent-secondary);
-  }
-  
-  .item-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-  }
-  
-  /* Results Section */
-  .results-section {
-    border: 1px solid var(--border-dim);
-    background: var(--bg-secondary);
-    padding: 1rem;
-    flex: 1;
-  }
-  
-  .section-stats {
-    color: var(--text-dim);
-    font-size: 0.9em;
-  }
-  
   /* Error Container */
   .error-container {
-    border: 1px solid var(--error);
-    background: rgba(255, 0, 0, 0.05);
-    padding: 1rem;
-    margin: 1rem 0;
-  }
-  
-  .error-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    background: rgba(255, 0, 0, 0.05);
+    border: 1px solid var(--error);
   }
   
   .error-icon {
@@ -730,23 +489,35 @@
     font-weight: bold;
   }
   
-  .error-title {
-    color: var(--error);
-    font-weight: bold;
-  }
-  
-  .error-message {
+  .error-text {
     color: var(--text-primary);
     font-family: 'Courier New', monospace;
-    white-space: pre-wrap;
   }
   
-  /* Results Grid */
+  /* Results Section - VEREINFACHT */
+  .results-section {
+    flex: 1;
+    border: 1px solid var(--border-dim);
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+  }
+  
+  .results-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border-dim);
+  }
+  
+  .results-title {
+    color: var(--accent-primary);
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  
   .results-grid {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    margin-top: 1rem;
   }
   
   .result-card {
@@ -761,26 +532,6 @@
     box-shadow: var(--glow);
   }
   
-  .result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-dim);
-  }
-  
-  .result-id {
-    color: var(--accent-primary);
-    font-weight: bold;
-    font-family: 'Courier New', monospace;
-  }
-  
-  .result-source {
-    color: var(--text-dim);
-    font-size: 0.9em;
-  }
-  
   .result-title {
     color: var(--text-primary);
     font-size: 1.1em;
@@ -791,47 +542,9 @@
   .result-description {
     color: var(--text-secondary);
     line-height: 1.5;
-    margin-bottom: 1rem;
   }
   
-  .result-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 0.8rem;
-    border-top: 1px solid var(--border-dim);
-    color: var(--text-dim);
-    font-size: 0.9em;
-  }
-  
-  .result-relevance {
-    color: var(--accent-primary);
-    font-weight: bold;
-  }
-  
-  .result-actions {
-    margin-top: 1rem;
-    padding-top: 0.8rem;
-    border-top: 1px solid var(--border-dim);
-  }
-  
-  .result-link {
-    color: var(--accent-primary);
-    text-decoration: none;
-    font-weight: bold;
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--accent-secondary);
-    background: rgba(0, 255, 0, 0.05);
-    transition: all 0.2s ease;
-  }
-  
-  .result-link:hover {
-    background: rgba(0, 255, 0, 0.1);
-    box-shadow: var(--terminal-glow);
-  }
-  
-  /* Loading Animation */
+  /* Loading Container */
   .loading-container {
     display: flex;
     justify-content: center;
@@ -864,15 +577,20 @@
     letter-spacing: 1px;
   }
   
-  /* System Footer */
-  .system-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.8rem 1.5rem;
+  /* No Results */
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  
+  /* Footer */
+  .footer {
+    padding: 1rem 1.5rem;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-primary);
-    border-bottom: 1px solid var(--accent-dark);
+    text-align: center;
   }
   
   .footer-text {
@@ -880,22 +598,68 @@
     font-size: 0.9em;
   }
   
-  .footer-warning {
-    color: var(--warning);
-    font-weight: bold;
-    font-size: 0.9em;
-    letter-spacing: 0.5px;
+  /* Auth Loading */
+  .auth-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: var(--bg-primary);
   }
   
-  /* Responsive Design */
-  @media (max-width: 1024px) {
-    .system-header, .header-left, .header-right {
+  .terminal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .loading-text {
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  
+  .access-denied {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: var(--bg-primary);
+  }
+  
+  .denied-terminal {
+    padding: 2rem;
+    border: 1px solid var(--error);
+    background: var(--bg-secondary);
+  }
+  
+  .denied-message {
+    color: var(--error);
+    font-family: 'Courier New', monospace;
+    font-size: 1.2em;
+    text-align: center;
+  }
+  
+  /* Animations */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .header {
       flex-direction: column;
-      gap: 0.8rem;
-      align-items: flex-start;
+      gap: 1rem;
+      text-align: center;
     }
     
-    .input-container {
+    .user-display {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .search-input-group {
       flex-direction: column;
       align-items: stretch;
     }
@@ -904,33 +668,12 @@
       justify-content: center;
     }
     
-    .input-actions {
-      justify-content: center;
+    .search-buttons {
+      flex-direction: column;
     }
     
-    .protocol-info {
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-  }
-  
-  @media (max-width: 768px) {
     .main-interface {
       padding: 1rem;
-    }
-    
-    .system-footer {
-      flex-direction: column;
-      gap: 0.5rem;
-      text-align: center;
-    }
-    
-    .history-grid {
-      flex-direction: column;
-    }
-    
-    .item-text {
-      max-width: 100%;
     }
   }
 </style>
