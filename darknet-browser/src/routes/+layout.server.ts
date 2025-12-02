@@ -1,6 +1,6 @@
 export const load = () => {
   return {
-    title: 'DarkWeb Browser',
+    title: 'darknet Browser',
     description: 'Secure Search Interface'
   };
 };

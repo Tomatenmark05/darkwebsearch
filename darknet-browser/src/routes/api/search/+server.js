@@ -1,4 +1,6 @@
 import { json } from '@sveltejs/kit'
+import { env as privateEnv } from '$env/dynamic/private'
+import { env as publicEnv } from '$env/dynamic/public'
 
 export async function POST({ request }) {
   try {
@@ -14,11 +16,14 @@ export async function POST({ request }) {
     
     const token = authHeader.split('Bearer ')[1]
     
-    // Korrekte Supabase URL und ANON KEY
-    const supabaseUrl = 'https://owddlfgtopfeqbkmwsox.supabase.co'
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93ZGRsZmd0b3BmZXFia213c294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODg1MTAsImV4cCI6MjA4MDI2NDUxMH0.mMKdgjR0bItJ3Kxrcn6FDWWnlSPAOq1IxodwFb2C0Ak'
+    const supabaseUrl = privateEnv.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL
+    const supabaseKey = privateEnv.SUPABASE_SERVICE_ROLE_KEY || privateEnv.SUPABASE_ANON_KEY || privateEnv.SUPABASE_KEY || publicEnv.PUBLIC_SUPABASE_ANON_KEY || publicEnv.PUBLIC_SUPABASE_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase URL or key missing in environment')
+      return json({ error: 'Server misconfiguration' }, { status: 500 })
+    }
     
-    // Token direkt mit Supabase REST API validieren
     const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
       method: 'GET',
       headers: {
@@ -49,14 +54,13 @@ export async function POST({ request }) {
       return json({ error: 'Query is required' }, { status: 400 })
     }
     
-    // Vereinfachte Mock Response - nur Title und Description
     return json({
       success: true,
       query,
       results: [
         {
           title: `Search result: ${query}`,
-          description: 'Analysis of encrypted network patterns and darkweb intelligence for the provided search query.'
+          description: 'Analysis of encrypted network patterns and darknet intelligence for the provided search query.'
         },
         {
           title: 'Encrypted Communications',
@@ -72,7 +76,7 @@ export async function POST({ request }) {
         },
         {
           title: 'Data Correlation',
-          description: 'Cross-referenced data from multiple darkweb sources showing significant correlation with search terms.'
+          description: 'Cross-referenced data from multiple darknet sources showing significant correlation with search terms.'
         }
       ],
       metadata: {

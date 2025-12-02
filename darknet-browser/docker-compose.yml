@@ -1,22 +1,23 @@
 version: '3.8'
 
 services:
-  darkweb-gui:
+  darknet-gui:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: darkweb-gui
+    container_name: darknet-gui
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - MANAGER_SERVICE_URL=http://manager:3001
-      # Supabase Environment Variables
-      - PUBLIC_SUPABASE_URL=https://owddlfgtopfeqbkmwsox.supabase.co
-      - PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93ZGRsZmd0b3BmZXFia213c294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODg1MTAsImV4cCI6MjA4MDI2NDUxMH0.mMKdgjR0bItJ3Kxrcn6FDWWnlSPAOq1IxodwFb2C0Ak
+      - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - PUBLIC_SUPABASE_KEY=${PUBLIC_SUPABASE_KEY}
+    env_file:
+      - .env
     networks:
-      - darkweb-network
+      - darknet-network
     restart: unless-stopped
 
   manager:
@@ -29,9 +30,9 @@ services:
     environment:
       - PORT=3001
     networks:
-      - darkweb-network
+      - darknet-network
     restart: unless-stopped
 
 networks:
-  darkweb-network:
+  darknet-network:
     driver: bridge

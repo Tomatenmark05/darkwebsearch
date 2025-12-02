@@ -176,11 +176,10 @@
   </div>
 {:else}
   <div class="terminal-interface">
-    <!-- Header - VEREINFACHT: Nur System Name -->
     <header class="header">
       <div class="system-id">
         <span class="prompt">&gt;&gt;</span>
-        <span class="system-name">DARKWEB_BROWSER</span>
+        <span class="system-name">darknet_BROWSER</span>
       </div>
       <div class="user-display">
         <span class="user-name">{session.user.email.split('@')[0]}</span>
@@ -293,14 +292,13 @@
     <!-- Footer -->
     <footer class="footer">
       <span class="footer-text">
-        DARKWEB BROWSER | SECURE SEARCH INTERFACE
+        darknet BROWSER | SECURE SEARCH INTERFACE
       </span>
     </footer>
   </div>
 {/if}
 
 <style>
-  /* Terminal Interface Container */
   .terminal-interface {
     min-height: 100vh;
     display: flex;
@@ -308,7 +306,6 @@
     background: var(--bg-primary);
   }
   
-  /* Header - VEREINFACHT */
   .header {
     display: flex;
     justify-content: space-between;
@@ -494,7 +491,6 @@
     font-family: 'Courier New', monospace;
   }
   
-  /* Results Section - VEREINFACHT */
   .results-section {
     flex: 1;
     border: 1px solid var(--border-dim);

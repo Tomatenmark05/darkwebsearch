@@ -1,5 +1,5 @@
 :root {
-  /* Farbpalette - Green/Black/Gray Theme */
+  /* Green/Black/Gray Theme */
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
   --bg-tertiary: #111111;
@@ -24,7 +24,7 @@
   --error: #ff0000;
   --info: #00ffff;
   
-  /* Effekte */
+  /* Effects */
   --glow: 0 0 10px var(--accent-glow);
   --glow-strong: 0 0 20px var(--accent-glow);
   --terminal-glow: 0 0 5px var(--accent-primary);
@@ -54,7 +54,6 @@ body {
   color: var(--bg-primary);
 }
 
-/* Scrollbar - Terminal Style */
 ::-webkit-scrollbar {
   width: 8px;
   background: var(--bg-secondary);
