@@ -4,7 +4,10 @@ import asyncio
 import secrets
 import string
 import requests
+from requests.sessions import Session
 from requests.models import HTTPError
+from api.db.models import Links, Content
+from api.db.database import SessionLocal, get_db
 
 
 class ContiniousLoop():
@@ -20,10 +23,8 @@ class ContiniousLoop():
         self.crawl_thread: int = crawl_thread
         self.analyse_threads: int = analyse_thread
 
-        self.crawler_running_jobs = []
-        self.analyse_running_jobs = []
-
-        self.awaiting_contents = []
+        self.crawler_running_jobs = {}
+        self.analyse_running_jobs = {}
 
 
     async def continious_loop(self):
@@ -32,12 +33,21 @@ class ContiniousLoop():
             print(self.crawler_running_jobs)
             if len(self.crawler_running_jobs) < self.crawl_thread:
                 link = self.get_crawl_link()
-                content = self.start_crawljob(link)
-                self.awaiting_contents.append(content)
+                if link:
+                    content = self.start_crawljob(link)
             await asyncio.sleep(1)
 
+
     def get_crawl_link(self):
-        return "https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion/"
+        with SessionLocal() as db:
+            not_analysed = db.query(Links.url).filter(Links.analysed_on == None).first()
+            if not_analysed:
+                print("URL to analyse: ", not_analysed[0])
+                return not_analysed[0]
+            else:
+                print("All links already analysed")
+                return False
+
 
     def start_crawljob(self, link):
         # Use provided link; fall back to default if None/empty
@@ -56,14 +66,14 @@ class ContiniousLoop():
 
         job_id = data.get("job_id")
         if response.status_code == 200 and job_id:
-            self.crawler_running_jobs.append(job_id)
+            self.crawler_running_jobs[job_id] = link
             # return parsed JSON so downstream code gets a serializable object
             return data
         else:
             raise Exception(f"Error: Crawler Job could not be started (status {response.status_code}): {response.text}")
 
 
-    def start_analysejob(self, content):
+    def start_analysejob(self, content, url):
 
         payload = {"content": content}
 
@@ -79,7 +89,7 @@ class ContiniousLoop():
         job_id = data.get("jobId")
 
         if response.status_code == 202 and job_id:
-            self.analyse_running_jobs.append(job_id)
+            self.analyse_running_jobs[job_id] = url
             return True
         else:
             raise Exception(f"Error: Analyse Job could not be started (status {response.status_code}): {response.text}")
