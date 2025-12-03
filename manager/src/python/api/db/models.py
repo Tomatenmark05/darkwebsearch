@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    create_engine, Column, String, Integer, ForeignKey
+    create_engine, Column, String, Integer, ForeignKey, Date
 )
 from sqlalchemy.orm import sessionmaker, relationship, Session, declarative_base
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -55,3 +55,12 @@ class Tag(Base):
     )
 
     contents = association_proxy("content_links", "content")
+
+
+class Links(Base):
+    __tablename__ = "links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String(2083), unique=True, index=True, nullable=False)
+    analysed_on = Column(Date, nullable=True)
+
