@@ -3,10 +3,11 @@ from typing import List, Optional
 import os
 from fastapi import APIRouter, Depends, Header, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
-from api.db.models import ContentTag, Tag, Content
+from api.db.models import ContentTag, Tag, Content, Links
 from api.db.database import get_db
 from sqlalchemy.orm import Session, joinedload
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import datetime
 
 from continous_loop import loop
 
@@ -65,7 +66,7 @@ def require_api_key(credentials: HTTPAuthorizationCredentials = Depends(security
 
 
 @router.post("/search")
-async def search(req: SearchRequest, token: str = Depends(_require_jwt), session: Session = Depends(get_db)):
+async def search(req: SearchRequest, session: Session = Depends(get_db)):
     # exact match on tag name; use .ilike(f"%{req.query}%") for substring/case-insensitive
     q = (
         session.query(Content)
@@ -85,20 +86,25 @@ async def search(req: SearchRequest, token: str = Depends(_require_jwt), session
             url=content.url,
             description=getattr(content, "description", "")
         ))
-    return SearchResult(results=results)
+    return results
 
 
 @router.post("/crawl-results")
-async def crawl_results(req: CrawlResult) -> bool:
-    if req.url and req.job_id and req.content:
-        loop.crawler_running_jobs.remove(req.job_id)
-        status = loop.start_analysejob(req.content)
+async def crawl_results(req: CrawlResult, db: Session = Depends(get_db)) -> bool:
+    if req.job_id and req.content:
+        url = loop.crawler_running_jobs[req.job_id]
+
+        link = db.query(Links).filter(Links.url == url).first()
+        link.analysed_on = datetime.date.today()
+        db.commit()
+
+        loop.crawler_running_jobs.pop(req.job_id)
+
+        status = loop.start_analysejob(req.content, url)
 
     if status:
-        print("Successfully started analyse Job")
         return True
     else:
-        print("Error starting analyse Job")
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="crawl-results not implemented yet")
 
 
@@ -124,8 +130,10 @@ async def analyse_results(req: AnalyseResult, db: Session = Depends(get_db)) -> 
         required_tags = existing_tags + new_tags
 
 
+    real_url = loop.analyse_running_jobs[req.jobId]
+    loop.analyse_running_jobs.pop(req.jobId)
     new_content = Content(
-        url = req.url,
+        url = real_url,
         title = req.title,
         description = req.description,
         tag_links = [ContentTag(tag=tag) for tag in required_tags]
