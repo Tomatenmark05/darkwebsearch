@@ -54,6 +54,8 @@ class Crawler:
                     'job_id': job_id,
                     'content': value,
                 }, headers=headers, timeout=10)
+            
+            JOB_STORE[job_id]["analysis_status"] = 'sent off'
         except Exception as exc:
             print(exc)
             pass
