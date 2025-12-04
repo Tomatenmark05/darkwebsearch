@@ -80,3 +80,7 @@ class Crawler:
     @staticmethod
     def get_job(job_id: str) -> Optional[Dict]:
         return JOB_STORE.get(job_id)
+    
+    @staticmethod
+    def get_jobs() -> Dict:
+        return JOB_STORE

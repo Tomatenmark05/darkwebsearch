@@ -45,7 +45,7 @@ class TestCrawler(unittest.TestCase):
             job_id = c.start_crawl(['http://example.com'])
 
             # job should be in the instance JOB_STORE
-            self.assertIn(job_id, c.JOB_STORE)
+            self.assertIn(job_id, c.get_jobs())
 
             job = self.wait_for_job_finished(c, job_id, timeout=5.0)
             self.assertIsNotNone(job, 'Job did not finish in time')
