@@ -8,3 +8,8 @@ At this stage the FastAPI container offers 1 endpoint:
  - GET /status -> gets the status of all stored jobs
 
 The GUI has not been implemented yet, because it only provides configuration settings and is not needed yet for basic functionallity.
+
+To start the service just use the `docker-compose.yaml` file inside the `/crawler/` directory.
+For analysis connection the manager service is also required to run. If the manager service is not ran and one wants to verify the results of the crawl other by using the `/status/{job_id}` endpoint just run `docker logs crawler` and the content of a crawled website will be printed somewhere.
+
+For a simple test case try the .onion address of DuckDuckGo: `https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion/`.
