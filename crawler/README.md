@@ -13,3 +13,5 @@ To start the service just use the `docker-compose.yaml` file inside the `/crawle
 For analysis connection the manager service is also required to run. If the manager service is not ran and one wants to verify the results of the crawl other by using the `/status/{job_id}` endpoint just run `docker logs crawler` and the content of a crawled website will be printed somewhere.
 
 For a simple test case try the .onion address of DuckDuckGo: `https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion/`.
+
+> If something doesn't work at first try, wait till the status of the tor container is marked as `unhealthy`. This is because the maintainer of the docker image implemented a flawed health check
