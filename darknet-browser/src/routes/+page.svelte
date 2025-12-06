@@ -34,33 +34,43 @@
     }
   }
   
-  let sessionCheckInterval
-  
   // On mount - check authentication
   onMount(async () => {
+    console.log('=== PAGE MOUNT ===')
+    
     const { data } = await supabase.auth.getSession()
+    console.log('Session data:', data)
     
     if (!data.session) {
+      console.log('No session, redirecting to login')
       goto('/login')
       return
     }
     
+    console.log('User authenticated:', data.session.user.email)
     session = data.session
     authLoading = false
     
-    // Periodic session check
-    sessionCheckInterval = setInterval(async () => {
-      const freshSession = await refreshSession()
-      if (freshSession) {
-        session = freshSession
-      } else {
-        goto('/login')
+    // Auth state listener (besser als Interval)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log('Auth state changed:', event)
+        
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED' || !currentSession) {
+          console.log('User signed out or session expired')
+          session = null
+          goto('/login')
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed')
+          session = currentSession
+        }
       }
-    }, 4 * 60 * 1000)
+    )
     
     return () => {
-      if (sessionCheckInterval) {
-        clearInterval(sessionCheckInterval)
+      console.log('Cleaning up auth listener')
+      if (subscription) {
+        subscription.unsubscribe()
       }
     }
   })
@@ -69,7 +79,7 @@
   async function executeSearch() {
     if (!query.trim()) return
     
-    // Refresh session before search
+    // Refresh session before search (WICHTIG für Token-Refresh!)
     const freshSession = await refreshSession()
     
     if (!freshSession) {
@@ -132,17 +142,36 @@
   }
   
   async function handleLogout() {
-    if (sessionCheckInterval) {
-      clearInterval(sessionCheckInterval)
+    console.log('Logout initiated')
+    
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        console.error('Logout error:', error)
+        throw error
+      }
+      
+      console.log('Logout successful')
+      
+      // Clear local storage
+      if (typeof window !== 'undefined') {
+        localStorage.clear()
+      }
+      
+      // Clear session state
+      session = null
+      
+      // Redirect to login page
+      goto('/login')
+      
+    } catch (err) {
+      console.error('Logout failed:', err)
+      error = `[ERROR] Logout failed: ${err.message}`
+      // Trotzdem zu Login redirecten
+      goto('/login')
     }
-    
-    await supabase.auth.signOut()
-    
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('supabase.auth.token')
-    }
-    
-    goto('/login')
   }
   
   function handleKeyPress(e) {
@@ -183,7 +212,7 @@
       </div>
       <div class="user-display">
         <span class="user-name">{session.user.email.split('@')[0]}</span>
-        <button on:click={handleLogout} class="logout-button">
+        <button on:click={handleLogout} class="logout-button" title="Click to logout">
           LOGOUT
         </button>
       </div>
@@ -343,7 +372,7 @@
     font-size: 0.9em;
     text-transform: lowercase;
   }
-  
+    
   .logout-button {
     padding: 0.4rem 1rem;
     background: transparent;
@@ -353,11 +382,22 @@
     font-size: 0.8em;
     cursor: pointer;
     transition: all 0.2s ease;
+    outline: none;
   }
-  
+
   .logout-button:hover {
     border-color: var(--error);
     color: var(--error);
+    background: rgba(255, 0, 0, 0.1);
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+  }
+
+  .logout-button:active {
+    transform: scale(0.95);
+  }
+
+  .logout-button:focus {
+    border-color: var(--accent-primary);
   }
   
   /* Main Interface */

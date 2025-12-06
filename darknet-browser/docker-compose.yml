@@ -4,35 +4,23 @@ services:
   darknet-gui:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     container_name: darknet-gui
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - MANAGER_SERVICE_URL=http://manager:3001
       - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL}
       - PUBLIC_SUPABASE_KEY=${PUBLIC_SUPABASE_KEY}
+      - SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     env_file:
       - .env
     networks:
-      - darknet-network
-    restart: unless-stopped
-
-  manager:
-    image: node:18-alpine
-    container_name: manager-service
-    command: >
-      sh -c "echo 'Manager service would run on port 3001' &&
-             echo 'Waiting for GUI connection...' &&
-             sleep infinity"
-    environment:
-      - PORT=3001
-    networks:
-      - darknet-network
+      - shared-net  # WICHTIG: shared-net verwenden
     restart: unless-stopped
 
 networks:
-  darknet-network:
-    driver: bridge
+  shared-net:
+    external: true  # Verwendet externes Netzwerk
