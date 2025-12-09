@@ -64,13 +64,31 @@ export async function POST({ request }) {
     const trimmedQuery = query.trim()
     
     // 4. AN MANAGER WEITERLEITEN (wenn er läuft)
+    console.log(`=== DEBUG: Vorbereitung für Manager Request ===`)
     console.log(`Search query: ${trimmedQuery}`)
-    console.log(`Attempting to connect to manager: ${MANAGER_SERVICE_URL}`)
+    console.log(`User: ${userData.email} (ID: ${userData.id})`)
+    console.log(`Manager URL: ${MANAGER_SERVICE_URL}`)
     
     try {
       // Versuche Manager zu erreichen
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout
+      
+      // REQUEST BODY für Debugging
+      const requestBody = {
+        query: trimmedQuery,
+        user: {
+          id: userData.id,
+          email: userData.email
+        }
+      }
+      
+      console.log(`=== DEBUG: Sende Request an Manager ===`)
+      console.log(`URL: ${MANAGER_SERVICE_URL}/search`)
+      console.log(`Method: POST`)
+      console.log(`Headers: Content-Type: application/json, Accept: application/json`)
+      console.log(`Body: ${JSON.stringify(requestBody, null, 2)}`)
+      console.log(`========================================`)
       
       const managerResponse = await fetch(`${MANAGER_SERVICE_URL}/search`, {
         method: 'POST',
@@ -78,17 +96,19 @@ export async function POST({ request }) {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          query: trimmedQuery
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       })
       
       clearTimeout(timeoutId)
       
+      console.log(`=== DEBUG: Response vom Manager ===`)
+      console.log(`Status: ${managerResponse.status} ${managerResponse.statusText}`)
+      
       if (managerResponse.ok) {
         const managerData = await managerResponse.json()
-        console.log('Got response from manager:', managerData)
+        console.log(`Response Data: ${JSON.stringify(managerData).substring(0, 200)}...`)
+        console.log(`========================================`)
         
         // Ergebnisse vom Manager zurückgeben
         return json({
@@ -105,12 +125,18 @@ export async function POST({ request }) {
         })
       } else {
         // Manager antwortet mit Fehler
-        throw new Error(`Manager responded with ${managerResponse.status}`)
+        const errorText = await managerResponse.text()
+        console.log(`Error Response: ${errorText}`)
+        console.log(`========================================`)
+        throw new Error(`Manager responded with ${managerResponse.status}: ${errorText}`)
       }
       
     } catch (managerError) {
       // Manager nicht erreichbar oder Fehler
-      console.log('Manager not available, using fallback:', managerError.message)
+      console.log(`=== DEBUG: Manager Fehler ===`)
+      console.log(`Error: ${managerError.message}`)
+      console.log(`Using fallback results`)
+      console.log(`========================================`)
       
       // FALLBACK: Statische Ergebnisse (wie bisher)
       return json({
@@ -129,7 +155,8 @@ export async function POST({ request }) {
     }
     
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('=== DEBUG: API Error ===')
+    console.error(error)
     
     return json({
       success: false,
