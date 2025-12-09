@@ -2,12 +2,12 @@ import { json } from '@sveltejs/kit'
 import { env as privateEnv } from '$env/dynamic/private'
 import { env as publicEnv } from '$env/dynamic/public'
 
-// Manager Service URL (im shared-net Netzwerk)
+// Manager Service URL (in the shared-net NW)
 const MANAGER_SERVICE_URL = 'http://manager:8000'
 
 export async function POST({ request }) {
   try {
-    // 1. Authorization (Ihre bestehende Supabase Auth)
+    // 1. Authorization
     const authHeader = request.headers.get('Authorization')
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -19,7 +19,7 @@ export async function POST({ request }) {
     
     const token = authHeader.split('Bearer ')[1]
     
-    // 2. Supabase Token verifizieren (Ihr bestehender Code)
+    // 2. Supabase Token Verification
     const supabaseUrl = privateEnv.SUPABASE_URL || publicEnv.PUBLIC_SUPABASE_URL
     const supabaseKey = privateEnv.SUPABASE_SERVICE_ROLE_KEY
 
@@ -51,7 +51,7 @@ export async function POST({ request }) {
       }, { status: 401 })
     }
     
-    // 3. Query aus Request
+    // 3. Query from Request
     const { query } = await request.json()
     
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -63,18 +63,18 @@ export async function POST({ request }) {
     
     const trimmedQuery = query.trim()
     
-    // 4. AN MANAGER WEITERLEITEN (wenn er läuft)
+    // 4. Forward to manager (if running)
     console.log(`=== DEBUG: Vorbereitung für Manager Request ===`)
     console.log(`Search query: ${trimmedQuery}`)
     console.log(`User: ${userData.email} (ID: ${userData.id})`)
     console.log(`Manager URL: ${MANAGER_SERVICE_URL}`)
     
     try {
-      // Versuche Manager zu erreichen
+      // Try to reach manager
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout
       
-      // REQUEST BODY für Debugging
+      // REQUEST BODY for debugging
       const requestBody = {
         query: trimmedQuery,
         user: {
@@ -110,7 +110,7 @@ export async function POST({ request }) {
         console.log(`Response Data: ${JSON.stringify(managerData).substring(0, 200)}...`)
         console.log(`========================================`)
         
-        // Ergebnisse vom Manager zurückgeben
+        // Return results from manager
         return json({
           success: true,
           query: trimmedQuery,
@@ -124,7 +124,7 @@ export async function POST({ request }) {
           }
         })
       } else {
-        // Manager antwortet mit Fehler
+        // Manager responds with error
         const errorText = await managerResponse.text()
         console.log(`Error Response: ${errorText}`)
         console.log(`========================================`)
@@ -132,13 +132,13 @@ export async function POST({ request }) {
       }
       
     } catch (managerError) {
-      // Manager nicht erreichbar oder Fehler
+      // Manager not reachable or error
       console.log(`=== DEBUG: Manager Fehler ===`)
       console.log(`Error: ${managerError.message}`)
       console.log(`Using fallback results`)
       console.log(`========================================`)
       
-      // FALLBACK: Statische Ergebnisse (wie bisher)
+      // FALLBACK: Static results (as before)
       return json({
         success: true,
         query: trimmedQuery,
@@ -167,7 +167,7 @@ export async function POST({ request }) {
   }
 }
 
-// Fallback-Funktion (Ihre bisherigen statischen Ergebnisse)
+// Fallback function (previous static results)
 function getFallbackResults(query) {
   return [
     {

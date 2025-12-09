@@ -21,7 +21,7 @@
 
 **Logs:**
 
-Die Anwendung schreibt detaillierte Logs direkt in die Docker-Container-Ausgabe. Diese sind in Echtzeit über das Terminal einsehbar (docker logs -f darknet-gui). Example:
+The application writes detailed logs directly to the Docker container output. These can be viewed in real time via the terminal (docker logs -f darknet-gui). Example:
 
 darknet-gui    | ========================================
 darknet-gui    | === DEBUG: Vorbereitung für Manager Request ===

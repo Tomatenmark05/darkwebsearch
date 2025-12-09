@@ -1,5 +1,4 @@
 :root {
-  /* Green/Black/Gray Theme */
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
   --bg-tertiary: #111111;
@@ -24,13 +23,11 @@
   --error: #ff0000;
   --info: #00ffff;
   
-  /* Effects */
   --glow: 0 0 10px var(--accent-glow);
   --glow-strong: 0 0 20px var(--accent-glow);
   --terminal-glow: 0 0 5px var(--accent-primary);
 }
 
-/* Globale Styles */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -48,7 +45,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Terminal Selection */
 ::selection {
   background-color: var(--accent-primary);
   color: var(--bg-primary);
@@ -74,7 +70,6 @@ body {
   box-shadow: var(--terminal-glow);
 }
 
-/* Terminal Flicker Animation */
 @keyframes flicker {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.9; }
@@ -90,7 +85,6 @@ body {
   100% { transform: translateY(100vh); }
 }
 
-/* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-weight: normal;
   letter-spacing: 1px;

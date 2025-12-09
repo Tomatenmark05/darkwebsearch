@@ -9,7 +9,6 @@
     %sveltekit.head%
     
     <style>
-      /* Terminal Scanline */
       .scanline {
         position: fixed;
         top: 0;
@@ -30,7 +29,6 @@
         filter: blur(0.5px);
       }
       
-      /* Matrix Rain Effect (optional background) */
       .matrix-bg {
         position: fixed;
         top: 0;
@@ -61,7 +59,6 @@
     <div style="display: contents">%sveltekit.body%</div>
     
     <script>
-      // Minimal matrix effect for terminal feel
       document.addEventListener('DOMContentLoaded', () => {
         const bg = document.querySelector('.matrix-bg');
         if (bg) {

@@ -4,7 +4,7 @@ services:
   darknet-gui:
     build:
       context: .
-      dockerfile: docker/Dockerfile  # Pfad zur Dockerfile angeben
+      dockerfile: docker/Dockerfile
     container_name: darknet-gui
     ports:
       - "3000:3000"
@@ -23,5 +23,5 @@ services:
 
 networks:
   shared-net:
-    external: true  # WICHTIG: external setzen, da Netzwerk schon existiert
-    name: shared-net  # Netzwerk-Name explizit setzen
+    external: true
+    name: shared-net
