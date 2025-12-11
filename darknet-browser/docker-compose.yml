@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  darknet-gui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: darknet-gui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - PUBLIC_SUPABASE_KEY=${PUBLIC_SUPABASE_KEY}
+      - SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    env_file:
+      - .env
+    networks:
+      - shared-net
+    restart: unless-stopped
+
+networks:
+  shared-net:
+    external: true
+    name: shared-net

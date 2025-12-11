@@ -1,0 +1,100 @@
+:root {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #111111;
+  --bg-card: #1a1a1a;
+  
+  --text-primary: #00ff00;
+  --text-secondary: #00cc00;
+  --text-dim: #008800;
+  --text-muted: #666666;
+  
+  --accent-primary: #00ff00;
+  --accent-glow: rgba(0, 255, 0, 0.3);
+  --accent-secondary: #00aa00;
+  --accent-dark: #006600;
+  
+  --border-primary: #333333;
+  --border-glow: #00ff00;
+  --border-dim: #222222;
+  
+  --success: #00ff00;
+  --warning: #ffff00;
+  --error: #ff0000;
+  --info: #00ffff;
+  
+  --glow: 0 0 10px var(--accent-glow);
+  --glow-strong: 0 0 20px var(--accent-glow);
+  --terminal-glow: 0 0 5px var(--accent-primary);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: 100vh;
+  overflow-x: hidden;
+  letter-spacing: 0.5px;
+}
+
+::selection {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-dark);
+  border: 1px solid var(--accent-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
+  box-shadow: var(--terminal-glow);
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: normal;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+code {
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 2px 4px;
+  border: 1px solid var(--border-dim);
+}
