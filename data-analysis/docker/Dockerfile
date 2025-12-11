@@ -4,5 +4,5 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 EXPOSE 8000
-CMD ["fastapi", "run"]
+CMD ["sh", "-c", "python3 tests.py && fastapi run"]
 
