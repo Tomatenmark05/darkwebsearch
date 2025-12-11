@@ -5,6 +5,27 @@ import { env as publicEnv } from '$env/dynamic/public'
 // Manager Service URL (in the shared-net NW)
 const MANAGER_SERVICE_URL = 'http://manager:8000'
 
+// Hilfsfunktion, um Manager-Ergebnisse zu normalisieren
+function normalizeManagerResults(payload) {
+  // Fall 1: Top-Level-Array
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  // Fall 2: Objekt mit möglichen Ergebnis-Schlüsseln
+  if (payload && typeof payload === 'object') {
+    const candidateKeys = ['results', 'data', 'items', 'hits', 'documents', 'docs']
+    for (const key of candidateKeys) {
+      if (Array.isArray(payload[key])) {
+        return payload[key]
+      }
+    }
+  }
+
+  // Nichts Passendes gefunden
+  return []
+}
+
 export async function POST({ request }) {
   try {
     // 1. Authorization
@@ -107,20 +128,23 @@ export async function POST({ request }) {
       
       if (managerResponse.ok) {
         const managerData = await managerResponse.json()
-        console.log(`Response Data: ${JSON.stringify(managerData).substring(0, 200)}...`)
+        const normalizedResults = normalizeManagerResults(managerData)
+        console.log(`Response Data (normalized length): ${normalizedResults.length}`)
+        console.log(`Preview: ${JSON.stringify(normalizedResults[0] || {}).substring(0, 200)}...`)
         console.log(`========================================`)
         
-        // Return results from manager
+        // Return results from manager (normalisiert)
         return json({
           success: true,
           query: trimmedQuery,
           user_id: userData.id,
-          results: managerData.results || managerData.data || [],
+          results: normalizedResults,
           metadata: {
             search_id: crypto.randomUUID(),
             timestamp: new Date().toISOString(),
-            results_count: (managerData.results || managerData.data || []).length,
-            source: 'manager-service'
+            results_count: normalizedResults.length,
+            source: 'manager-service',
+            raw_shape: Array.isArray(managerData) ? 'array' : 'object'
           }
         })
       } else {
