@@ -25,6 +25,8 @@ services:
       - db
     env_file:
       - .env
+    environment:
+      RUN_TESTS: "1"
     ports:
       - "8001:8000"
 

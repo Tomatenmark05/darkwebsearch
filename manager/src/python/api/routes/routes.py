@@ -16,10 +16,6 @@ router = APIRouter()
 API_KEY = os.getenv("API_KEY", "changeme")
 security = HTTPBearer()
 
-class SearchRequest(BaseModel):
-    query: str
-
-
 class SearchResult(BaseModel):
     title: Optional[str]
     url: Optional[str]
@@ -40,6 +36,7 @@ class AnalyseResult(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
+    user: dict
 
 
 
@@ -86,6 +83,7 @@ async def search(req: SearchRequest, session: Session = Depends(get_db)):
             url=content.url,
             description=getattr(content, "description", "")
         ))
+    print(results)
     return results
 
 

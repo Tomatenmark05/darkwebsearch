@@ -21,4 +21,8 @@ USER appuser
 # Expose default FastAPI port
 EXPOSE 8000
 
+
+
+COPY --chmod=0755 docker/python/entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
