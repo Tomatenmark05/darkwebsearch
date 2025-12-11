@@ -44,8 +44,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-!lib/supabase.js
 lib64/
 parts/
 sdist/
