@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 import logging
 from api.routes.routes import router
+from api.routes.links import router as links_router
+
 import uvicorn
 from continous_loop import loop
 
@@ -11,9 +13,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="darkwebsearch-manager", version="0.1.0")
 
-# mount routes from routes.py
 app.include_router(router)
-
+app.include_router(links_router, prefix="/links", tags=["links"])
 
 @app.on_event("startup")
 async def on_startup():

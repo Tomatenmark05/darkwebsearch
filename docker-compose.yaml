@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+
+########################### Browser ################################
+  darknet-gui:
+    build:
+      context: ./darknet-browser/
+      dockerfile: docker/Dockerfile
+    container_name: darknet-gui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - PUBLIC_SUPABASE_KEY=${PUBLIC_SUPABASE_KEY}
+      - SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    env_file:
+      - .env
+    restart: unless-stopped
+
+
+
+########################### Manager ################################
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  manager:
+    build:
+      context: ./manager/
+      dockerfile: ./docker/python/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"
+
+  # frontend:
+  #   build: ./svelte
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     VITE_BACKEND_URL: http://backend:8000
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - ./frontend:/app
+  #   command: npm run dev -- --host 0.0.0.0
+
+
+########################### Crawler ################################
+  tor:
+    image: barneybuffet/tor:latest
+    container_name: tor
+    environment:
+      TOR_LOG_CONFIG: 'false'
+      TOR_PROXY: 'true'
+      TOR_PROXY_PORT: '0.0.0.0:9050'
+      TOR_PROXY_ACCEPT: 'accept 0.0.0.0/0'
+      TOR_CONTROL: 'true'
+      TOR_CONTROL_PORT: '0.0.0.0:9051'
+      TOR_CONTROL_COOKIE: 'true'
+      TOR_SERVICE: 'false'
+    restart: unless-stopped
+    volumes:
+      - tor_data:/tor
+
+  fastapi:
+    depends_on:
+      - tor
+    volumes:
+      - tor_data:/tor
+    build:
+      context: ./crawler/src/fastapi
+      dockerfile: ../../docker/fastapi/Dockerfile
+    container_name: crawler
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  management-gui:
+    build:
+      context: ./crawler/src/management-gui
+      dockerfile: ../../docker/management-gui/Dockerfile
+    container_name: crawler-management-gui
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+########################### Data Analysis ################################
+  analyzer:
+    build:
+      context: ./data-analysis/src
+      dockerfile: ../docker/Dockerfile
+    container_name: data_analyzer
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+
+volumes:
+  db_data:
+  tor_data:
+
+
+networks:
+  default:
+    name: shared-net
+    external: "true"
+
+
+

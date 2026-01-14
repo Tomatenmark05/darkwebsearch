@@ -8,12 +8,14 @@ from api.db.database import get_db
 from sqlalchemy.orm import Session, joinedload
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import datetime
+from rapidfuzz import process, utils
 
 from continous_loop import loop
 
 router = APIRouter()
 
-API_KEY = os.getenv("API_KEY", "changeme")
+
+API_KEY = os.getenv("MANAGER_API_KEY", "changeme")
 security = HTTPBearer()
 
 class SearchRequest(BaseModel):
@@ -67,12 +69,28 @@ def require_api_key(credentials: HTTPAuthorizationCredentials = Depends(security
 
 @router.post("/search")
 async def search(req: SearchRequest, session: Session = Depends(get_db)):
-    # exact match on tag name; use .ilike(f"%{req.query}%") for substring/case-insensitive
+    
+    # 1. Fetch all unique tag names/IDs once (cache this if possible)
+    tags_from_db = session.query(Tag.id, Tag.name).all() 
+    choices = {t.name: t.id for t in tags_from_db}
+
+    # 2. Find the top 5 closest matches to the user's query
+    # This handles "pythn" -> "python"
+    matches = process.extract(
+        req.query, 
+        choices.keys(), 
+        processor=utils.default_process, 
+        limit=5, 
+        score_cutoff=60
+    )
+
+    matched_tag_ids = [choices[name] for name, score, idx in matches]
+
+    # 3. Filter your query using the IDs
     q = (
         session.query(Content)
-        .join(ContentTag)          # join association object
-        .join(Tag)                 # join tag
-        .filter(Tag.name.ilike(f"%{req.query}%"))  # filter by tag name
+        .join(ContentTag)
+        .filter(ContentTag.tag_id.in_(matched_tag_ids))
         .order_by(ContentTag.priority.desc())
         .distinct(Content.id)      # remove duplicate contents if multiple matching rows
         .options(joinedload(Content.tag_links).joinedload(ContentTag.tag))  # avoid N+1 when accessing tags
@@ -163,8 +181,9 @@ async def stop_loop():
     return 200
 
 
-
-
+@router.get("/loop-status")
+async def loop_status():
+    return loop.active
 
 
 
