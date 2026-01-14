@@ -14,6 +14,7 @@ from continous_loop import loop
 
 router = APIRouter()
 
+
 API_KEY = os.getenv("MANAGER_API_KEY", "changeme")
 security = HTTPBearer()
 
@@ -180,8 +181,9 @@ async def stop_loop():
     return 200
 
 
-
-
+@router.get("/loop-status")
+async def loop_status():
+    return loop.active
 
 
 

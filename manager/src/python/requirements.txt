@@ -13,3 +13,4 @@ SQLAlchemy==2.0.44
 PyMySQL==1.1.2
 cryptography==46.0.3
 uvicorn[standard]
+rapidfuzz==2.15.1
