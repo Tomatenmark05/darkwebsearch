@@ -23,7 +23,7 @@ The application is composed of four main microservices, each developed and maint
 
 ### Manager
 - Orchestrates Crawler and Data analysis Service
-- Keeps database of raw crawled data as well as analysed data
+- Keeps a database containing content, links and tags
 - Manages search querys from Sveltekit
 - (Caching Search queries)
 
