@@ -6,6 +6,7 @@ import string
 import requests
 from requests.sessions import Session
 from requests.models import HTTPError
+import os
 from api.db.models import Links, Content
 from api.db.database import SessionLocal, get_db
 
@@ -106,8 +107,9 @@ class ContiniousLoop():
 
 crawler_url = "http://crawler:8080/crawl"
 analyse_url = "http://analyzer:8000/analyze"
-crawler_APIKEY = ""
-analyse_APIKEY = "this-is-my-super-secure-api-key"
+# Read API keys from environment so services use the same configured value when running in Docker
+crawler_APIKEY = os.getenv("CRAWLER_APIKEY", os.getenv("API_KEY", "changeme"))
+analyse_APIKEY = os.getenv("API_KEY", "changeme")
 crawl_thread = 1
 analyse_thread = 1
 

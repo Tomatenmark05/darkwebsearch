@@ -13,7 +13,7 @@ from continous_loop import loop
 
 router = APIRouter()
 
-API_KEY = os.getenv("API_KEY", "changeme")
+API_KEY = os.getenv("MANAGER_API_KEY", "changeme")
 security = HTTPBearer()
 
 class SearchRequest(BaseModel):
