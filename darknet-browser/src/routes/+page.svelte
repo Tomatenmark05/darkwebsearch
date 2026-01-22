@@ -12,6 +12,10 @@
   let loading = false
   let results = []
   let error = null
+
+  // Copy feedback
+  let copiedUrl = null
+  let copiedTimer = null
   
   // Session refresh function
   async function refreshSession() {
@@ -32,6 +36,23 @@
       console.error('Failed to refresh session:', error)
       return null
     }
+  }
+
+  // Sanitize noisy HTML-ish strings
+  function cleanText(s) {
+    if (!s) return ''
+    return String(s)
+      .replace(/<!DOCTYPE[^>]*>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  function truncate(s, n = 180) {
+    if (!s) return ''
+    return s.length > n ? s.slice(0, n) + '…' : s
   }
   
   // On mount - check authentication
@@ -72,6 +93,9 @@
       if (subscription) {
         subscription.unsubscribe()
       }
+      if (copiedTimer) {
+        clearTimeout(copiedTimer)
+      }
     }
   })
   
@@ -92,6 +116,7 @@
     loading = true
     error = null
     results = []
+    copiedUrl = null
     
     try {
       const response = await fetch('/api/search', {
@@ -134,11 +159,46 @@
       loading = false
     }
   }
+
+  // Robust copy (clipboard API + fallback)
+  async function copyToClipboard(text) {
+    try {
+      if (!text) return
+
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'absolute'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(ta)
+        if (!ok) throw new Error('Clipboard blocked')
+      }
+
+      copiedUrl = text
+      if (copiedTimer) clearTimeout(copiedTimer)
+      copiedTimer = setTimeout(() => {
+        copiedUrl = null
+      }, 1500)
+    } catch (e) {
+      error = `[ERROR] Could not copy link: ${e.message}`
+    }
+  }
   
   function clearInterface() {
     query = ''
     results = []
     error = null
+    copiedUrl = null
+    if (copiedTimer) {
+      clearTimeout(copiedTimer)
+      copiedTimer = null
+    }
   }
   
   async function handleLogout() {
@@ -273,6 +333,14 @@
             <div class="error-text">{error}</div>
           </div>
         {/if}
+
+        <!-- Copy feedback -->
+        {#if copiedUrl}
+          <div class="copy-container">
+            <div class="copy-icon">[✓]</div>
+            <div class="copy-text">LINK COPIED</div>
+          </div>
+        {/if}
       </section>
       
       <!-- Results Section -->
@@ -286,12 +354,28 @@
             {#each results as result, i}
               <div class="result-card">
                 <div class="result-title">
-                  {result.title || 'UNTITLED'}
+                  {truncate(cleanText(result.title || 'UNTITLED'), 140)}
                 </div>
                 
                 {#if result.description}
                   <div class="result-description">
-                    {result.description}
+                    {truncate(cleanText(result.description), 280)}
+                  </div>
+                {/if}
+
+                {#if result.url}
+                  <div class="result-url-row">
+                    <div class="result-url-text">
+                      <span class="url-label">LINK:</span>
+                      <span class="url-value">{result.url}</span>
+                    </div>
+                    <button
+                      class="copy-btn"
+                      on:click={() => copyToClipboard(result.url)}
+                      title="Copy link to clipboard"
+                    >
+                      COPY LINK
+                    </button>
                   </div>
                 {/if}
               </div>
@@ -530,6 +614,27 @@
     color: var(--text-primary);
     font-family: 'Courier New', monospace;
   }
+
+  /* Copy feedback container */
+  .copy-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    background: rgba(0, 255, 0, 0.05);
+    border: 1px solid rgba(0, 255, 0, 0.35);
+  }
+
+  .copy-icon {
+    font-weight: bold;
+    color: var(--text-primary);
+  }
+
+  .copy-text {
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+  }
   
   .results-section {
     flex: 1;
@@ -711,5 +816,49 @@
     .main-interface {
       padding: 1rem;
     }
+  }
+
+  /* URL row + copy button (text color like rest) */
+  .result-url-row {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .result-url-text {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--text-primary);
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .url-label {
+    opacity: 0.85;
+  }
+
+  .url-value {
+    color: var(--text-primary);
+  }
+
+  .copy-btn {
+    padding: 6px 10px;
+    border: 1px solid var(--border-dim);
+    background: transparent;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent-primary);
+    box-shadow: var(--terminal-glow);
   }
 </style>
